@@ -21,9 +21,10 @@ env:
     availability:
       - RUNTIME
 
-  # Chave do Gemini — NUNCA commitar. Criar no Secret Manager:
-  #   firebase apphosting:secrets:set GEMINI_API_KEY
-  - variable: GEMINI_API_KEY
-    secret: GEMINI_API_KEY
-    availability:
-      - RUNTIME
+  # Chave do Gemini — habilitar DEPOIS de criar o segredo no Secret Manager:
+  #   firebase apphosting:secrets:set GEMINI_API_KEY --project crm-benesse
+  # Depois de criado, descomente o bloco abaixo e faça novo deploy.
+  # - variable: GEMINI_API_KEY
+  #   secret: GEMINI_API_KEY
+  #   availability:
+  #     - RUNTIME
