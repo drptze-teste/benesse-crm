@@ -1,0 +1,19 @@
+# Dependências e builds
+node_modules/
+dist/
+.firebase/
+
+# Variáveis de ambiente (segredos)
+.env
+.env.local
+.env.*.local
+
+# Chaves de service account do Firebase Admin — NUNCA commitar
+*-adminsdk-*.json
+serviceAccount*.json
+service-account*.json
+
+# Logs e SO
+*.log
+.DS_Store
+Thumbs.db

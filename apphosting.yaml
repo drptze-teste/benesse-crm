@@ -1,0 +1,29 @@
+# Firebase App Hosting — configuração de runtime do backend Express (server.ts).
+# O App Hosting roda `npm run build` e depois `npm start` (node dist/server.cjs).
+# PORT é injetada automaticamente pelo App Hosting.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # Modelo Gemini usado pelas rotas /api/ai/* (server-side).
+  - variable: GEMINI_MODEL
+    value: gemini-2.0-flash
+    availability:
+      - RUNTIME
+
+  # Token de verificação do webhook do WhatsApp Business.
+  - variable: WHATSAPP_VERIFY_TOKEN
+    value: benesse_crm_token
+    availability:
+      - RUNTIME
+
+  # Chave do Gemini — NUNCA commitar. Criar no Secret Manager:
+  #   firebase apphosting:secrets:set GEMINI_API_KEY
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME

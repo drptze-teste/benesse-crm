@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: email (string), displayName (string), role (string), businessUnit (string)
+    //
+    // Collection: leads
+    // Fields: name (string), phone (string), email (string), companyName (string), 
+    //         leadSource (string), currentStage (string), priority (string), 
+    //         temperature (string), lastInteractionDate (string), nextActionDate (string), 
+    //         ownerUserId (string), businessUnit (string)
+    //
+    // Collection: interactions
+    // Fields: leadId (string), type (string), dateTime (string), summary (string), 
+    //         outcome (string), nextStep (string), createdByUserId (string)
+    //
+    // Collection: tasks
+    // Fields: leadId (string), title (string), dueDate (string), reminderDate (string), 
+    //         priority (string), status (string), assignedToUserId (string)
+    //
+    // Collection: documents
+    // Fields: leadId (string), type (string), fileUrl (string), versionNote (string), 
+    //         uploadedByUserId (string), uploadedAt (string)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "drptze@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isManager() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    function getMyBusinessUnit() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessUnit;
+    }
+
+    function isSameBusinessUnit(data) {
+      return data.businessUnit == getMyBusinessUnit();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isEmailOwner(email) {
+      return isAuthenticated() && request.auth.token.email == email;
+    }
+
+    function isLeadOwner(leadId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/leads/$(leadId)).data.ownerUserId == request.auth.token.email;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidLead(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.currentStage is string &&
+             data.ownerUserId is string &&
+             data.businessUnit in ['Gestão Esportiva', 'Studio de Pilates'];
+    }
+
+    function isValidInteraction(data) {
+      return data.leadId is string &&
+             data.type in ['Call', 'WhatsApp', 'Email', 'Meeting', 'Note', 'Trial Class', 'Status Change', 'Proposal'] &&
+             data.createdByUserId == request.auth.token.email;
+    }
+
+    function isValidTask(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.status in ['Pending', 'Completed', 'Cancelled'] &&
+             data.assignedToUserId == request.auth.token.email;
+    }
+
+    function isValidNegotiation(data) {
+      return data.customerId is string &&
+             data.title is string && data.title.size() > 0 &&
+             data.value is number &&
+             data.status in ['Won', 'Lost', 'Ongoing'] &&
+             data.createdByUserId == request.auth.token.email;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    }
+
+    match /leads/{leadId} {
+      allow read: if isAuthenticated() && (resource.data.ownerUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
+      allow create: if isAuthenticated() && isValidLead(request.resource.data) && (request.resource.data.ownerUserId == request.auth.token.email || isAdmin());
+      allow update: if isAuthenticated() && isValidLead(request.resource.data) && (resource.data.ownerUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
+      allow delete: if isAdmin() || (isManager() && isSameBusinessUnit(resource.data)) || resource.data.ownerUserId == request.auth.token.email;
+    }
+
+    match /interactions/{id} {
+      allow read: if isAuthenticated() && (resource.data.createdByUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(get(/databases/$(database)/documents/leads/$(resource.data.leadId)).data)) || isAdmin());
+      allow create: if isAuthenticated() && isValidInteraction(request.resource.data);
+      allow update: if isAuthenticated() && isValidInteraction(request.resource.data) && (resource.data.createdByUserId == request.auth.token.email || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /tasks/{id} {
+      allow read: if isAuthenticated() && (resource.data.assignedToUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
+      allow create: if isAuthenticated() && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && isValidTask(request.resource.data) && (resource.data.assignedToUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /documents/{id} {
+      allow read: if isAuthenticated() && (
+        resource.data.uploadedByUserId == request.auth.token.email ||
+        isAdmin() ||
+        (isManager() && isSameBusinessUnit(get(/databases/$(database)/documents/leads/$(resource.data.leadId)).data))
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        isLeadOwner(request.resource.data.leadId) ||
+        (isManager() && isSameBusinessUnit(get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data))
+      );
+      allow update: if isAuthenticated() && (resource.data.uploadedByUserId == request.auth.token.email || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /whatsapp_inbox/{id} {
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /funnel_configs/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isManager() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendor';
+    }
+
+    match /negotiations/{id} {
+      allow read: if isAuthenticated() && (resource.data.createdByUserId == request.auth.token.email || isAdmin() || (isManager() && isSameBusinessUnit(get(/databases/$(database)/documents/leads/$(resource.data.customerId)).data)));
+      allow create: if isAuthenticated() && isValidNegotiation(request.resource.data);
+      allow update: if isAuthenticated() && isValidNegotiation(request.resource.data) && (resource.data.createdByUserId == request.auth.token.email || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}
