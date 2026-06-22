@@ -43,6 +43,8 @@ function toNegotiationPricing(res: ResultadoProposta): NegotiationPricing {
     custoTotalBruto: res.custoTotalBruto,
     valorFinal: res.valorFinal,
     margemLucro: res.margemLucro,
+    lucroLiquido: res.lucroLiquido,
+    margemLiquida: res.margemLiquida,
     totalHoras: res.totalHoras,
     servicos: res.servicosCalculados.map(s => ({
       modalidade: s.modalidade,
@@ -212,7 +214,7 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
                     <span className="font-bold text-[#003366]">%</span>
                   </div>
                 </div>
-                <input type="range" min={30} max={90} step={0.5} value={markupPct}
+                <input type="range" min={10} max={90} step={0.5} value={markupPct}
                   onChange={e => setMarkupPct(parseNum(e.target.value, 65))}
                   className="w-full accent-[#003366]" />
               </div>
@@ -221,14 +223,15 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
                 <Row label="Custo bruto (c/ encargos)" value={formatBRL(resultado.custoTotalBruto)} />
                 <Row label="Comissão" value={`${formatPct(resultado.comissaoRate * 100, 1)}%`} />
                 <Row label="ISS / impostos" value={formatBRL(resultado.iss)} />
+                <Row label="Lucro líquido" value={formatBRL(resultado.lucroLiquido)} />
                 <Row label="Total de horas/mês" value={`${formatPct(resultado.totalHoras, 2)} h`} />
               </dl>
 
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-xs text-gray-500">Valor final mensal</p>
                 <p className="text-2xl font-black text-[#003366]">{formatBRL(resultado.valorFinal)}</p>
-                <Badge variant={resultado.margemLucro >= 0.5 ? 'success' : 'warning'} className="mt-1">
-                  Margem {formatPct(resultado.margemLucro * 100, 1)}%
+                <Badge variant={resultado.margemLiquida >= 0.25 ? 'success' : 'warning'} className="mt-1">
+                  Margem líquida {formatPct(resultado.margemLiquida * 100, 1)}%
                 </Badge>
               </div>
 

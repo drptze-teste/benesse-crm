@@ -56,12 +56,16 @@ export function calcularProposta(servicos: Atividade[], markupPct?: number): Res
   const iss                  = valorComComissao * ISS_RATE;
   const valorFinal           = valorComComissao + iss;
   const margemLucro          = valorFinal > 0 ? (valorFinal - custoTotalBruto) / valorFinal : 0;
+  // Lucro líquido: o que sobra após custo, comissão e imposto. Como comissão e
+  // ISS são embutidos "por cima", em valor absoluto o lucro equivale ao markup.
+  const lucroLiquido         = valorSemImpostos - custoTotalBruto;
+  const margemLiquida        = valorFinal > 0 ? lucroLiquido / valorFinal : 0;
   const totalHoras           = servicosCalculados.reduce((a, s) => a + s.horasMes, 0);
 
   return {
     servicosCalculados, custoTotalBruto, markup, markupPct: mPct,
     comissaoRate, valorSemImpostos, valorComComissao,
-    iss, valorFinal, margemLucro, totalHoras
+    iss, valorFinal, margemLucro, lucroLiquido, margemLiquida, totalHoras
   };
 }
 

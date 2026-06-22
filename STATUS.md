@@ -21,6 +21,8 @@ _Última atualização: 2026-06-22_
 ## 🔧 Ajustes em andamento
 - [x] Precificador: inputs de valor em moeda BR (R$ 41,55 — vírgula, 2 casas)
 - [x] Precificador: markup aceita meio por cento (ex.: 65,5%)
+- [x] Precificador: markup começa em 10% (era 30%)
+- [x] Precificador: resultado mostra **lucro líquido** (R$) e **margem líquida** (já descontados comissão e ISS)
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores

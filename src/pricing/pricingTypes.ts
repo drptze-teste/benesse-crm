@@ -44,6 +44,8 @@ export interface ResultadoProposta {
   valorComComissao: number;
   iss: number;
   valorFinal: number;
-  margemLucro: number;
+  margemLucro: number;     // (valorFinal - custoBruto) / valorFinal — antes de descontar comissão/imposto
+  lucroLiquido: number;    // lucro real em R$ (já descontados comissão e ISS)
+  margemLiquida: number;   // lucroLiquido / valorFinal
   totalHoras: number;
 }

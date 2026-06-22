@@ -106,6 +106,8 @@ export interface NegotiationPricing {
   custoTotalBruto: number;
   valorFinal: number;
   margemLucro: number;
+  lucroLiquido?: number;
+  margemLiquida?: number;
   totalHoras: number;
   servicos: NegotiationPricingItem[];
 }

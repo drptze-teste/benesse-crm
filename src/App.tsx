@@ -3559,9 +3559,9 @@ const NegotiationHistory: React.FC<{
             {neg.pricing && (
               <div className="mb-3 flex flex-wrap gap-1.5">
                 <Badge variant="info">Precificado</Badge>
-                <Badge variant="neutral">Markup {neg.pricing.markupPct}%</Badge>
-                <Badge variant={neg.pricing.margemLucro >= 0.5 ? 'success' : 'warning'}>
-                  Margem {(neg.pricing.margemLucro * 100).toFixed(0)}%
+                <Badge variant="neutral">Markup {neg.pricing.markupPct.toLocaleString('pt-BR')}%</Badge>
+                <Badge variant={(neg.pricing.margemLiquida ?? neg.pricing.margemLucro) >= 0.25 ? 'success' : 'warning'}>
+                  Margem líq. {((neg.pricing.margemLiquida ?? neg.pricing.margemLucro) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
                 </Badge>
                 <Badge variant="neutral">{neg.pricing.servicos.length} serviço(s)</Badge>
               </div>
