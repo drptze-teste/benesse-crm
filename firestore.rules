@@ -58,10 +58,6 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isEmailOwner(email) {
-      return isAuthenticated() && request.auth.token.email == email;
-    }
-
     function isLeadOwner(leadId) {
       return isAuthenticated() && get(/databases/$(database)/documents/leads/$(leadId)).data.ownerUserId == request.auth.token.email;
     }
