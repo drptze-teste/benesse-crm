@@ -78,6 +78,22 @@ function toNegotiationPricing(res: ResultadoProposta, encargoCltPct: number): Ne
 
 export interface PricerCustomer { id: string; name: string }
 
+// Reconstrói a lista editável de serviços a partir de um snapshot salvo.
+function pricingToServicos(p: NegotiationPricing): Atividade[] {
+  return (p.servicos ?? []).map(s => ({
+    modalidade: s.modalidade,
+    turno: s.turno ?? 'Manhã',
+    horario: '',
+    diasSemana: [],
+    diasMes: s.diasMes,
+    horasDia: s.horasDia,
+    custoHora: s.custoHora,
+    regime: s.regime,
+    tipoServico: s.tipoServico ?? 'Recorrente',
+    quantidadeEventos: s.quantidadeEventos ?? 1,
+  }));
+}
+
 interface PrecificadorViewProps {
   // Quando fornecido, exibe um botão para aplicar o valor calculado (ex.: numa negociação).
   onApply?: (valorFinal: number, pricing: NegotiationPricing) => void;
@@ -86,13 +102,16 @@ interface PrecificadorViewProps {
   customers?: PricerCustomer[];
   onSaveProposal?: (customerId: string, title: string, valorFinal: number, pricing: NegotiationPricing) => Promise<void> | void;
   suggestTitle?: (customerId: string) => string;
+  // Quando fornecido, inicia o precificador a partir de uma proposta salva ("usar como base").
+  initialPricing?: NegotiationPricing | null;
 }
 
-export function PrecificadorView({ onApply, embedded, customers, onSaveProposal, suggestTitle }: PrecificadorViewProps = {}) {
+export function PrecificadorView({ onApply, embedded, customers, onSaveProposal, suggestTitle, initialPricing }: PrecificadorViewProps = {}) {
   const [tabela, setTabela] = useState<Modalidade[]>(loadTabela);
-  const [servicos, setServicos] = useState<Atividade[]>(() => [novoServico(loadTabela())]);
-  const [markupPct, setMarkupPct] = useState(65);
-  const [encargoCltPct, setEncargoCltPct] = useState<number>(loadEncargo);
+  const [servicos, setServicos] = useState<Atividade[]>(() =>
+    initialPricing?.servicos?.length ? pricingToServicos(initialPricing) : [novoServico(loadTabela())]);
+  const [markupPct, setMarkupPct] = useState(() => initialPricing?.markupPct ?? 65);
+  const [encargoCltPct, setEncargoCltPct] = useState<number>(() => initialPricing?.encargoCltPct ?? loadEncargo());
   const [showTabela, setShowTabela] = useState(false);
   const [showSave, setShowSave] = useState(false);
 
@@ -120,7 +139,9 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
                 <Calculator size={22} /> Precificador
               </h3>
               <p className="text-xs text-gray-500">
-                Monte os serviços e ajuste o markup para chegar ao valor da proposta.
+                {initialPricing
+                  ? 'A partir de uma proposta salva — ao salvar, cria uma nova (o original fica intacto).'
+                  : 'Monte os serviços e ajuste o markup para chegar ao valor da proposta.'}
               </p>
             </div>
             <Button variant="outline" size="sm" icon={<Settings size={16} />}

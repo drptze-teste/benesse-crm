@@ -31,7 +31,9 @@ Abordagem: propostas = collection `negotiations` do Firestore (doc minúsculo, s
 - [x] Snapshot COMPLETO no `pricing` (serviços + markup + encargo) para reabrir igual
 - [x] Aba Precificador: botão **"Salvar como proposta"** → escolhe cliente + nome (padrão "Orçamento N")
 - [x] Dentro do cliente: "Nova Negociação" com precificador embutido (já existia)
-- [ ] **Reabrir/editar** uma proposta salva no precificador (carregar serviços + markup + encargo)
+- [x] Propostas são **histórico imutável**: cada save é um registro novo com data/hora (createdAt)
+- [x] Botão **"Usar como base"** na proposta → clona num rascunho editável no precificador; salvar gera uma NOVA proposta (o original não é alterado)
+- [x] Data + hora exibidas em cada proposta na ficha do cliente
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores

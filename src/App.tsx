@@ -470,6 +470,8 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+  // Rascunho carregado no precificador ao "usar como base" uma proposta salva.
+  const [pricingDraft, setPricingDraft] = useState<NegotiationPricing | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Data State
@@ -800,7 +802,7 @@ export default function App() {
           <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} info="Visão geral de performance e KPIs" />
           <SidebarItem icon={Users} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} info="Gestão de contatos e funil de vendas" />
           <SidebarItem icon={Target} label="Clientes" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} info="Cadastro de clientes e histórico de negociações" />
-          <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => setActiveTab('pricing')} info="Calcular valor de propostas (condomínio e laboral)" />
+          <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setActiveTab('pricing'); }} info="Calcular valor de propostas (condomínio e laboral)" />
           <SidebarItem icon={CheckSquare} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} info="Lembretes e ações pendentes" />
           <SidebarItem icon={MessageSquare} label="Interações" active={activeTab === 'interactions'} onClick={() => setActiveTab('interactions')} info="Histórico completo de contatos" />
           {profile?.role === 'admin' && (
@@ -1254,6 +1256,7 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
               >
                 <PrecificadorView
+                  initialPricing={pricingDraft}
                   customers={leads.filter(l => l.type === 'customer').map(l => ({ id: l.id, name: l.name }))}
                   suggestTitle={(customerId) => `Orçamento ${negotiations.filter(n => n.customerId === customerId).length + 1}`}
                   onSaveProposal={async (customerId, title, value, pricing) => {
@@ -1417,6 +1420,11 @@ export default function App() {
                   setShowEditLead(selectedLead);
                   setSelectedLead(null);
                 }}
+                onUseAsBase={(pricing) => {
+                  setPricingDraft(pricing);
+                  setSelectedLead(null);
+                  setActiveTab('pricing');
+                }}
                 funnelConfigs={funnelConfigs}
               />
             </motion.div>
@@ -1546,7 +1554,7 @@ export default function App() {
               </div>
               <nav className="flex-1 space-y-2">
                 <SidebarItem icon={Users} label="Meus Leads" active={activeTab === 'leads'} onClick={() => { setActiveTab('leads'); setIsSidebarOpen(false); }} />
-                <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setActiveTab('pricing'); setIsSidebarOpen(false); }} />
+                <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setActiveTab('pricing'); setIsSidebarOpen(false); }} />
                 <SidebarItem icon={CheckSquare} label="Minhas Tarefas" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
                 <SidebarItem icon={MessageSquare} label="Interações" active={activeTab === 'interactions'} onClick={() => { setActiveTab('interactions'); setIsSidebarOpen(false); }} />
               </nav>
@@ -2093,7 +2101,7 @@ function AddLeadForm({ onCancel, onSuccess, userId, businessUnit, initialData, f
   );
 }
 
-function LeadDetailsView({ lead, interactions, documents, negotiations, user, profile, onClose, onLogInteraction, onEdit, funnelConfigs }: { lead: Lead; interactions: Interaction[]; documents: LeadDocument[]; negotiations: Negotiation[]; user: FirebaseUser | null; profile: UserProfile | null; onClose: () => void; onLogInteraction: () => void; onEdit: () => void; funnelConfigs: Record<string, string[]> }) {
+function LeadDetailsView({ lead, interactions, documents, negotiations, user, profile, onClose, onLogInteraction, onEdit, onUseAsBase, funnelConfigs }: { lead: Lead; interactions: Interaction[]; documents: LeadDocument[]; negotiations: Negotiation[]; user: FirebaseUser | null; profile: UserProfile | null; onClose: () => void; onLogInteraction: () => void; onEdit: () => void; onUseAsBase: (pricing: NegotiationPricing) => void; funnelConfigs: Record<string, string[]> }) {
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
@@ -2570,10 +2578,11 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
         )}
 
         {activeTab === 'negotiations' && (
-          <NegotiationHistory 
-            customerId={lead.id} 
-            negotiations={negotiations} 
-            onAddNegotiation={() => setShowAddNegotiation(true)} 
+          <NegotiationHistory
+            customerId={lead.id}
+            negotiations={negotiations}
+            onAddNegotiation={() => setShowAddNegotiation(true)}
+            onUseAsBase={onUseAsBase}
           />
         )}
       </div>
@@ -3485,7 +3494,8 @@ const NegotiationHistory: React.FC<{
   customerId: string;
   negotiations: Negotiation[];
   onAddNegotiation: () => void;
-}> = ({ customerId, negotiations, onAddNegotiation }) => {
+  onUseAsBase: (pricing: NegotiationPricing) => void;
+}> = ({ customerId, negotiations, onAddNegotiation, onUseAsBase }) => {
   const [showImport, setShowImport] = useState(false);
   const [importData, setImportData] = useState('');
   const [importing, setImporting] = useState(false);
@@ -3570,7 +3580,13 @@ const NegotiationHistory: React.FC<{
               <div>
                 <h5 className="font-bold text-gray-900">{neg.title}</h5>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                  {format(new Date(neg.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {(() => {
+                    const c: any = neg.createdAt;
+                    const d = c?.toDate ? c.toDate() : (neg.date ? new Date(neg.date) : null);
+                    return d
+                      ? format(d, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+                      : format(new Date(neg.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+                  })()}
                 </p>
               </div>
               <Badge variant={neg.status === 'Won' ? 'success' : neg.status === 'Lost' ? 'danger' : 'warning'}>
@@ -3597,6 +3613,12 @@ const NegotiationHistory: React.FC<{
                 <span className="text-sm font-black">R$ {neg.value.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-2">
+                {neg.pricing && (
+                  <Button variant="ghost" size="sm" icon={<Calculator size={14} />}
+                    onClick={() => onUseAsBase(neg.pricing!)}>
+                    Usar como base
+                  </Button>
+                )}
                 {neg.documents && neg.documents.length > 0 && (
                   <div className="flex -space-x-2">
                     {neg.documents.map((doc, i) => (
