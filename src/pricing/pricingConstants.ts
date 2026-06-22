@@ -13,6 +13,8 @@ export const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 // Chave de persistência local da tabela de custos-base (por dispositivo).
 // TODO(fase futura): migrar para uma config global no Firestore (funnel_configs/pricing).
 export const PRICING_TABLE_KEY = "benesse_tabela_ref";
+// Chave de persistência local do percentual de encargos CLT editável.
+export const PRICING_ENCARGO_KEY = "benesse_encargo_clt";
 
 export const MODALIDADES_DEFAULT: Modalidade[] = [
   { nome: "Aerofight",               custoBase: 40 },

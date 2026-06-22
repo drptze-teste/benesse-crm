@@ -28,20 +28,24 @@ export function markupSugerido(custoTotalBruto: number): number {
   return 60;
 }
 
-export function calcularServico(s: Atividade) {
+export function calcularServico(s: Atividade, encargoCltFrac: number = ENCARGO_CLT) {
   const dias = s.tipoServico === 'Pontual' ? (s.quantidadeEventos || 1) : s.diasMes;
   const horasMes         = parseNum(dias) * parseNum(s.horasDia);
   const custoTotal       = parseNum(s.custoHora) * horasMes;
   // PJ não incide encargos CLT; só CLT recebe o multiplicador de encargos.
-  const encargo          = s.regime === 'PJ' ? 1 : (1 + ENCARGO_CLT);
+  const encargo          = s.regime === 'PJ' ? 1 : (1 + encargoCltFrac);
   const custoComEncargos = custoTotal * encargo;
   return { horasMes, custoTotal, custoComEncargos };
 }
 
-export function calcularProposta(servicos: Atividade[], markupPct?: number): ResultadoProposta {
+/**
+ * @param encargoCltPct percentual de encargos CLT (ex.: 65). Se omitido, usa ENCARGO_CLT.
+ */
+export function calcularProposta(servicos: Atividade[], markupPct?: number, encargoCltPct?: number): ResultadoProposta {
+  const encargoCltFrac = encargoCltPct !== undefined ? Math.max(0, parseNum(encargoCltPct, 65)) / 100 : ENCARGO_CLT;
   let custoTotalBruto = 0;
   const servicosCalculados = servicos.map(s => {
-    const c = calcularServico(s);
+    const c = calcularServico(s, encargoCltFrac);
     custoTotalBruto += c.custoComEncargos;
     return { ...s, ...c };
   });

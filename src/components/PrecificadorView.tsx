@@ -4,7 +4,7 @@ import { Card, Button, Badge, cn } from './UI';
 import { Atividade, Modalidade, ResultadoProposta } from '../pricing/pricingTypes';
 import { NegotiationPricing } from '../types';
 import {
-  MODALIDADES_DEFAULT, PRICING_TABLE_KEY, TURNOS,
+  MODALIDADES_DEFAULT, PRICING_TABLE_KEY, PRICING_ENCARGO_KEY, ENCARGO_CLT, TURNOS,
 } from '../pricing/pricingConstants';
 import {
   calcularProposta, matchCusto, parseNum, formatBRL,
@@ -24,6 +24,20 @@ function loadTabela(): Modalidade[] {
 
 function saveTabela(t: Modalidade[]) {
   try { localStorage.setItem(PRICING_TABLE_KEY, JSON.stringify(t)); } catch { /* quota */ }
+}
+
+const ENCARGO_DEFAULT = Math.round(ENCARGO_CLT * 1000) / 10; // ex.: 65
+
+function loadEncargo(): number {
+  try {
+    const raw = localStorage.getItem(PRICING_ENCARGO_KEY);
+    if (raw != null && raw !== '') { const n = parseNum(raw, ENCARGO_DEFAULT); if (n >= 0) return n; }
+  } catch { /* ignora */ }
+  return ENCARGO_DEFAULT;
+}
+
+function saveEncargo(v: number) {
+  try { localStorage.setItem(PRICING_ENCARGO_KEY, String(v)); } catch { /* quota */ }
 }
 
 const novoServico = (tabela: Modalidade[]): Atividade => {
@@ -68,11 +82,12 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
   const [tabela, setTabela] = useState<Modalidade[]>(loadTabela);
   const [servicos, setServicos] = useState<Atividade[]>(() => [novoServico(loadTabela())]);
   const [markupPct, setMarkupPct] = useState(65);
+  const [encargoCltPct, setEncargoCltPct] = useState<number>(loadEncargo);
   const [showTabela, setShowTabela] = useState(false);
 
   const resultado = useMemo(
-    () => calcularProposta(servicos, markupPct),
-    [servicos, markupPct]
+    () => calcularProposta(servicos, markupPct, encargoCltPct),
+    [servicos, markupPct, encargoCltPct]
   );
 
   const updateServico = (i: number, patch: Partial<Atividade>) => {
@@ -107,6 +122,8 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
             <TabelaEditor
               tabela={tabela}
               onChange={(t) => { setTabela(t); saveTabela(t); }}
+              encargoCltPct={encargoCltPct}
+              onEncargoChange={(v) => { setEncargoCltPct(v); saveEncargo(v); }}
               onClose={() => setShowTabela(false)}
             />
           )}
@@ -146,7 +163,7 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
                     <select className={inputCls} value={s.regime}
                       onChange={e => updateServico(i, { regime: e.target.value as 'CLT' | 'PJ' })}>
                       <option value="PJ">PJ</option>
-                      <option value="CLT">CLT (+65% encargos)</option>
+                      <option value="CLT">CLT (+{formatPct(encargoCltPct, 1)}% encargos)</option>
                     </select>
                   </Field>
                   <Field label="Tipo">
@@ -255,9 +272,11 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
 }
 
 // --- Editor da tabela de custos -----------------------------------------
-function TabelaEditor({ tabela, onChange, onClose }: {
+function TabelaEditor({ tabela, onChange, encargoCltPct, onEncargoChange, onClose }: {
   tabela: Modalidade[];
   onChange: (t: Modalidade[]) => void;
+  encargoCltPct: number;
+  onEncargoChange: (v: number) => void;
   onClose: () => void;
 }) {
   const [nome, setNome] = useState('');
@@ -271,6 +290,18 @@ function TabelaEditor({ tabela, onChange, onClose }: {
           <Button variant="ghost" size="sm" icon={<RotateCcw size={14} />}
             onClick={() => onChange(MODALIDADES_DEFAULT)}>Resetar</Button>
           <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200">
+        <div>
+          <span className="block text-xs font-bold text-gray-700">Encargos CLT (%)</span>
+          <span className="block text-[10px] text-gray-400">Aplicado só a serviços marcados como CLT</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <DecimalInput value={encargoCltPct} maxDecimals={1}
+            onChange={n => onEncargoChange(n)} className="w-20 text-right" />
+          <span className="text-sm font-bold text-gray-600">%</span>
         </div>
       </div>
 
