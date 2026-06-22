@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, Settings, RotateCcw, Save, Calculator, AlertTriangle, Check } from 'lucide-react';
 import { Card, Button, Badge, cn } from './UI';
 import { Atividade, Modalidade, ResultadoProposta } from '../pricing/pricingTypes';
@@ -168,14 +168,12 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
                     </Field>
                   )}
                   <Field label="Horas/dia">
-                    <input type="number" min={0} step="0.5" className={inputCls}
-                      value={s.horasDia}
-                      onChange={e => updateServico(i, { horasDia: parseNum(e.target.value) })} />
+                    <DecimalInput value={s.horasDia} maxDecimals={2}
+                      onChange={n => updateServico(i, { horasDia: n })} />
                   </Field>
-                  <Field label="Custo/hora (R$)">
-                    <input type="number" min={0} className={inputCls}
-                      value={s.custoHora}
-                      onChange={e => updateServico(i, { custoHora: parseNum(e.target.value) })} />
+                  <Field label="Custo/hora">
+                    <DecimalInput value={s.custoHora} prefix="R$" minDecimals={2} maxDecimals={2}
+                      onChange={n => updateServico(i, { custoHora: n })} />
                   </Field>
                 </div>
 
@@ -205,26 +203,32 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
               <h4 className="font-bold text-gray-900">Resultado</h4>
 
               <div>
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Markup</span><span className="font-bold text-[#003366]">{resultado.markupPct}%</span>
+                <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                  <span>Markup</span>
+                  <div className="flex items-center gap-1">
+                    <DecimalInput value={markupPct} maxDecimals={1}
+                      onChange={n => setMarkupPct(n)}
+                      className="w-16 py-1 text-right font-bold text-[#003366]" />
+                    <span className="font-bold text-[#003366]">%</span>
+                  </div>
                 </div>
-                <input type="range" min={30} max={90} value={markupPct}
+                <input type="range" min={30} max={90} step={0.5} value={markupPct}
                   onChange={e => setMarkupPct(parseNum(e.target.value, 65))}
                   className="w-full accent-[#003366]" />
               </div>
 
               <dl className="space-y-2 text-sm">
                 <Row label="Custo bruto (c/ encargos)" value={formatBRL(resultado.custoTotalBruto)} />
-                <Row label="Comissão" value={`${(resultado.comissaoRate * 100).toFixed(0)}%`} />
+                <Row label="Comissão" value={`${formatPct(resultado.comissaoRate * 100, 1)}%`} />
                 <Row label="ISS / impostos" value={formatBRL(resultado.iss)} />
-                <Row label="Total de horas/mês" value={`${resultado.totalHoras.toLocaleString('pt-BR')} h`} />
+                <Row label="Total de horas/mês" value={`${formatPct(resultado.totalHoras, 2)} h`} />
               </dl>
 
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-xs text-gray-500">Valor final mensal</p>
                 <p className="text-2xl font-black text-[#003366]">{formatBRL(resultado.valorFinal)}</p>
                 <Badge variant={resultado.margemLucro >= 0.5 ? 'success' : 'warning'} className="mt-1">
-                  Margem {(resultado.margemLucro * 100).toFixed(1)}%
+                  Margem {formatPct(resultado.margemLucro * 100, 1)}%
                 </Badge>
               </div>
 
@@ -272,8 +276,8 @@ function TabelaEditor({ tabela, onChange, onClose }: {
           <div key={i} className="flex items-center gap-2">
             <input className={cn(inputCls, 'flex-1')} value={m.nome}
               onChange={e => onChange(tabela.map((x, idx) => idx === i ? { ...x, nome: e.target.value } : x))} />
-            <input type="number" className={cn(inputCls, 'w-24')} value={m.custoBase}
-              onChange={e => onChange(tabela.map((x, idx) => idx === i ? { ...x, custoBase: parseNum(e.target.value) } : x))} />
+            <DecimalInput value={m.custoBase} prefix="R$" minDecimals={2} maxDecimals={2} className="w-28"
+              onChange={n => onChange(tabela.map((x, idx) => idx === i ? { ...x, custoBase: n } : x))} />
             <button className="text-gray-300 hover:text-red-500" aria-label="Remover"
               onClick={() => onChange(tabela.filter((_, idx) => idx !== i))}>
               <Trash2 size={14} />
@@ -285,7 +289,7 @@ function TabelaEditor({ tabela, onChange, onClose }: {
       <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
         <input className={cn(inputCls, 'flex-1')} placeholder="Nova modalidade" value={nome}
           onChange={e => setNome(e.target.value)} />
-        <input type="number" className={cn(inputCls, 'w-24')} placeholder="R$/h" value={custo}
+        <input type="text" inputMode="decimal" className={cn(inputCls, 'w-24')} placeholder="R$/h" value={custo}
           onChange={e => setCusto(e.target.value)} />
         <Button variant="secondary" size="sm" icon={<Save size={14} />}
           onClick={() => {
@@ -315,6 +319,59 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between">
       <dt className="text-gray-500">{label}</dt>
       <dd className="font-semibold text-gray-900">{value}</dd>
+    </div>
+  );
+}
+
+// Formata porcentagem no padrão BR (vírgula). Ex.: 65.5 -> "65,5"
+function formatPct(v: number, decimals = 1): string {
+  return (Number.isFinite(v) ? v : 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 0, maximumFractionDigits: decimals,
+  });
+}
+
+/**
+ * Input numérico em formato pt-BR (vírgula decimal). Mantém um texto local
+ * enquanto edita e devolve o número via onChange (parse tolerante a vírgula).
+ * Usado para valores em R$ (prefixo "R$", 2 casas) e para horas/markup.
+ */
+function DecimalInput({
+  value, onChange, prefix, minDecimals = 0, maxDecimals = 2, className,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  prefix?: string;
+  minDecimals?: number;
+  maxDecimals?: number;
+  className?: string;
+}) {
+  const format = (v: number) =>
+    v ? v.toLocaleString('pt-BR', { minimumFractionDigits: minDecimals, maximumFractionDigits: maxDecimals }) : '';
+
+  const [text, setText] = useState(() => format(value));
+
+  // Ressincroniza quando o valor muda por fora (ex.: trocar a modalidade
+  // redefine o custo/hora), sem atropelar o que o usuário está digitando.
+  useEffect(() => {
+    if (parseNum(text) !== value) setText(format(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <div className="relative">
+      {prefix && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+          {prefix}
+        </span>
+      )}
+      <input
+        type="text"
+        inputMode="decimal"
+        className={cn(inputCls, prefix ? 'pl-9' : '', className)}
+        value={text}
+        onChange={e => { setText(e.target.value); onChange(parseNum(e.target.value)); }}
+        onBlur={() => setText(format(value))}
+      />
     </div>
   );
 }
