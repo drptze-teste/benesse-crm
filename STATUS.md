@@ -10,6 +10,18 @@ _Última atualização: 2026-06-22_
 - **Repo:** https://github.com/drptze-teste/benesse-crm (deploy automático no push para `main`)
 - **Firebase:** projeto `crm-benesse` · Firestore banco `(default)` · App Hosting back-end `crmbenesse` (us-east4)
 
+## ⏸️ Onde paramos — sessão 2026-06-22
+Construído nesta sessão (tudo no ar, último commit `d7e1170`):
+1. Projeto unificado `benesse-crm` criado do zero (GitHub + Firebase `crm-benesse`), publicado via App Hosting.
+2. Correções de persistência do CRM + Gemini movido pro backend.
+3. Precificador embutido no CRM (aba + dentro da negociação).
+4. Precificador: moeda BR (R$ 41,55), markup 10–90% com meio %, lucro/margem líquida, encargo CLT editável (65%).
+5. Propostas anexadas ao cliente como histórico imutável + "Usar como base" (clona em rascunho novo).
+
+**Retomar amanhã por aqui:**
+- [ ] **Testar o fluxo de propostas** com um cliente real (converter um lead em Cliente → Precificador → "Salvar como proposta" → "Usar como base"). Validar na tela.
+- [ ] Depois, decidir entre: criar usuários vendedores · ativar IA do WhatsApp · migração de dados (ver Pendências).
+
 ## ✅ Pronto
 - Projeto unificado (CRM + Precificador) apontando para o Firebase próprio `crm-benesse`
 - Firestore criado; Auth e-mail/senha + Google ativos; regras + índices deployados
