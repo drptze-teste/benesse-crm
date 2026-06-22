@@ -93,16 +93,19 @@ export interface LeadDocument {
 
 export interface NegotiationPricingItem {
   modalidade: string;
+  turno?: string;
   tipoServico?: 'Recorrente' | 'Pontual';
   diasMes: number;
   horasDia: number;
   custoHora: number;
   regime: 'CLT' | 'PJ';
+  quantidadeEventos?: number;
   horasMes: number;
 }
 
 export interface NegotiationPricing {
   markupPct: number;
+  encargoCltPct?: number;   // encargo CLT usado, para reabrir a proposta igual
   custoTotalBruto: number;
   valorFinal: number;
   margemLucro: number;

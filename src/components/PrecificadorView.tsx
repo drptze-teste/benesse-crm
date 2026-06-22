@@ -51,9 +51,11 @@ const novoServico = (tabela: Modalidade[]): Atividade => {
 };
 
 // Converte o resultado do cálculo no detalhamento gravável numa negotiation.
-function toNegotiationPricing(res: ResultadoProposta): NegotiationPricing {
+// Guarda o snapshot COMPLETO dos serviços para a proposta poder ser reaberta.
+function toNegotiationPricing(res: ResultadoProposta, encargoCltPct: number): NegotiationPricing {
   return {
     markupPct: res.markupPct,
+    encargoCltPct,
     custoTotalBruto: res.custoTotalBruto,
     valorFinal: res.valorFinal,
     margemLucro: res.margemLucro,
@@ -62,28 +64,37 @@ function toNegotiationPricing(res: ResultadoProposta): NegotiationPricing {
     totalHoras: res.totalHoras,
     servicos: res.servicosCalculados.map(s => ({
       modalidade: s.modalidade,
+      turno: s.turno,
       tipoServico: s.tipoServico,
       diasMes: s.diasMes,
       horasDia: s.horasDia,
       custoHora: s.custoHora,
       regime: s.regime,
+      quantidadeEventos: s.quantidadeEventos,
       horasMes: s.horasMes,
     })),
   };
 }
 
+export interface PricerCustomer { id: string; name: string }
+
 interface PrecificadorViewProps {
   // Quando fornecido, exibe um botão para aplicar o valor calculado (ex.: numa negociação).
   onApply?: (valorFinal: number, pricing: NegotiationPricing) => void;
   embedded?: boolean;
+  // Quando fornecido (aba standalone), permite salvar o orçamento como proposta de um cliente.
+  customers?: PricerCustomer[];
+  onSaveProposal?: (customerId: string, title: string, valorFinal: number, pricing: NegotiationPricing) => Promise<void> | void;
+  suggestTitle?: (customerId: string) => string;
 }
 
-export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = {}) {
+export function PrecificadorView({ onApply, embedded, customers, onSaveProposal, suggestTitle }: PrecificadorViewProps = {}) {
   const [tabela, setTabela] = useState<Modalidade[]>(loadTabela);
   const [servicos, setServicos] = useState<Atividade[]>(() => [novoServico(loadTabela())]);
   const [markupPct, setMarkupPct] = useState(65);
   const [encargoCltPct, setEncargoCltPct] = useState<number>(loadEncargo);
   const [showTabela, setShowTabela] = useState(false);
+  const [showSave, setShowSave] = useState(false);
 
   const resultado = useMemo(
     () => calcularProposta(servicos, markupPct, encargoCltPct),
@@ -254,20 +265,103 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
 
               {onApply && (
                 <Button variant="secondary" className="w-full" icon={<Check size={16} />}
-                  onClick={() => onApply(resultado.valorFinal, toNegotiationPricing(resultado))}>
+                  onClick={() => onApply(resultado.valorFinal, toNegotiationPricing(resultado, encargoCltPct))}>
                   Usar este valor na negociação
+                </Button>
+              )}
+
+              {onSaveProposal && (
+                <Button variant="primary" className="w-full" icon={<Save size={16} />}
+                  onClick={() => setShowSave(true)}>
+                  Salvar como proposta
                 </Button>
               )}
             </Card>
 
             {!embedded && (
               <p className="text-[11px] text-gray-400 px-1">
-                Dica: ao criar uma negociação para um cliente, você pode calcular o valor por aqui e aplicá-lo direto.
+                Dica: monte o orçamento e clique em “Salvar como proposta” para anexá-lo a um cliente.
               </p>
             )}
           </div>
         </div>
+
+        {showSave && onSaveProposal && (
+          <SaveProposalDialog
+            customers={customers ?? []}
+            suggestTitle={suggestTitle}
+            onClose={() => setShowSave(false)}
+            onConfirm={async (customerId, title) => {
+              await onSaveProposal(customerId, title, resultado.valorFinal, toNegotiationPricing(resultado, encargoCltPct));
+              setShowSave(false);
+            }}
+          />
+        )}
       </div>
+  );
+}
+
+// --- Diálogo: salvar orçamento como proposta de um cliente ---------------
+function SaveProposalDialog({ customers, suggestTitle, onClose, onConfirm }: {
+  customers: PricerCustomer[];
+  suggestTitle?: (customerId: string) => string;
+  onClose: () => void;
+  onConfirm: (customerId: string, title: string) => Promise<void> | void;
+}) {
+  const [customerId, setCustomerId] = useState(customers[0]?.id ?? '');
+  const [title, setTitle] = useState(() => suggestTitle?.(customers[0]?.id ?? '') ?? 'Orçamento 1');
+  const [saving, setSaving] = useState(false);
+
+  const onPickCustomer = (id: string) => {
+    setCustomerId(id);
+    // Sugere o nome padrão do cliente escolhido (ex.: "Orçamento 3").
+    if (suggestTitle) setTitle(suggestTitle(id));
+  };
+
+  const handleSave = async () => {
+    if (!customerId || !title.trim()) return;
+    setSaving(true);
+    try {
+      await onConfirm(customerId, title.trim());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <Card className="w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-gray-900">Salvar como proposta</h4>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Fechar">✕</button>
+        </div>
+
+        {customers.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Nenhum cliente cadastrado. Converta um lead em cliente primeiro (aba Clientes).
+          </p>
+        ) : (
+          <>
+            <Field label="Cliente">
+              <select className={inputCls} value={customerId} onChange={e => onPickCustomer(e.target.value)}>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Nome da proposta">
+              <input className={inputCls} value={title} placeholder="Ex.: Orçamento 1"
+                onChange={e => setTitle(e.target.value)} />
+            </Field>
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={onClose}>Cancelar</Button>
+              <Button variant="primary" className="flex-1" loading={saving}
+                disabled={!customerId || !title.trim()} onClick={handleSave}>
+                Salvar
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
   );
 }
 

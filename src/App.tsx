@@ -1253,7 +1253,31 @@ export default function App() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <PrecificadorView />
+                <PrecificadorView
+                  customers={leads.filter(l => l.type === 'customer').map(l => ({ id: l.id, name: l.name }))}
+                  suggestTitle={(customerId) => `Orçamento ${negotiations.filter(n => n.customerId === customerId).length + 1}`}
+                  onSaveProposal={async (customerId, title, value, pricing) => {
+                    const email = auth.currentUser?.email;
+                    if (!email) { alert('Sua sessão expirou. Faça login novamente.'); return; }
+                    try {
+                      await addDoc(collection(db, 'negotiations'), {
+                        customerId,
+                        title,
+                        value: Number(value),
+                        date: new Date().toISOString(),
+                        status: 'Ongoing',
+                        description: '',
+                        createdAt: serverTimestamp(),
+                        createdByUserId: email,
+                        pricing,
+                      });
+                      alert('Proposta salva no cliente com sucesso.');
+                    } catch (err) {
+                      handleFirestoreError(err, OperationType.CREATE, 'negotiations');
+                      alert('Não foi possível salvar a proposta. Verifique suas permissões.');
+                    }
+                  }}
+                />
               </motion.div>
             )}
 

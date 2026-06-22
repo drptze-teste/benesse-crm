@@ -26,13 +26,12 @@ _Última atualização: 2026-06-22_
 - [x] Precificador: encargo CLT ajustado de 82,7% → **65%** (confirmar valor exato com o contador)
 - [x] Precificador: encargo CLT **editável** no painel da Tabela de custos (salvo no dispositivo); aplica só a serviços CLT (CLT e PJ podem coexistir no mesmo orçamento)
 
-## 🧭 Próxima feature — Propostas/orçamentos anexados ao cliente
-Abordagem recomendada (mais simples e leve): **reusar a collection `negotiations` do Firestore**
-como "proposta/orçamento" — nada de arquivos MD/Storage (mais pesado e difícil de editar/consultar).
-Cada proposta = 1 doc minúsculo com: `title` (nome editável, ex.: "Orçamento 1"), `customerId`
-(cliente), `value`, `status`, e `pricing` (snapshot completo dos serviços + markup + encargo) para
-poder **reabrir e editar** no precificador. Já parcialmente pronto via precificador embutido na
-"Nova Negociação". Falta: snapshot completo dos serviços + ação "reabrir/editar proposta".
+## 🧭 Propostas/orçamentos anexados ao cliente
+Abordagem: propostas = collection `negotiations` do Firestore (doc minúsculo, sem arquivos/Storage).
+- [x] Snapshot COMPLETO no `pricing` (serviços + markup + encargo) para reabrir igual
+- [x] Aba Precificador: botão **"Salvar como proposta"** → escolhe cliente + nome (padrão "Orçamento N")
+- [x] Dentro do cliente: "Nova Negociação" com precificador embutido (já existia)
+- [ ] **Reabrir/editar** uma proposta salva no precificador (carregar serviços + markup + encargo)
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
