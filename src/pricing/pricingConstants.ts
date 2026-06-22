@@ -1,7 +1,10 @@
 import { Modalidade } from './pricingTypes';
 
 // Encargos e impostos usados no cálculo da proposta.
-export const ENCARGO_CLT = 0.827;   // Encargos CLT sobre salário bruto (~82,7%)
+// ENCARGO_CLT: percentual de encargos trabalhistas sobre o custo direto da mão
+// de obra CLT (INSS, FGTS, 13º, férias+1/3, provisões de rescisão, etc).
+// Valor varia conforme as premissas contábeis — confirme com o contador.
+export const ENCARGO_CLT = 0.65;    // Encargos CLT (~65%)
 export const ISS_RATE = 0.0952;     // ISS / Simples Nacional
 
 export const TURNOS = ["Manhã", "Tarde", "Noite", "Manhã/Tarde", "Tarde/Noite", "Manhã/Noite", "Integral"];

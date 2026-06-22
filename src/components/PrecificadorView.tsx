@@ -146,7 +146,7 @@ export function PrecificadorView({ onApply, embedded }: PrecificadorViewProps = 
                     <select className={inputCls} value={s.regime}
                       onChange={e => updateServico(i, { regime: e.target.value as 'CLT' | 'PJ' })}>
                       <option value="PJ">PJ</option>
-                      <option value="CLT">CLT (+82,7% encargos)</option>
+                      <option value="CLT">CLT (+65% encargos)</option>
                     </select>
                   </Field>
                   <Field label="Tipo">
