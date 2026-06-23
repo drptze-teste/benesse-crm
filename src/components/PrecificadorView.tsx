@@ -102,11 +102,13 @@ interface PrecificadorViewProps {
   customers?: PricerCustomer[];
   onSaveProposal?: (customerId: string, title: string, valorFinal: number, pricing: NegotiationPricing) => Promise<void> | void;
   suggestTitle?: (customerId: string) => string;
+  // Cliente já selecionado por padrão no diálogo de salvar (ex.: ao vir de uma negociação).
+  preferredCustomerId?: string | null;
   // Quando fornecido, inicia o precificador a partir de uma proposta salva ("usar como base").
   initialPricing?: NegotiationPricing | null;
 }
 
-export function PrecificadorView({ onApply, embedded, customers, onSaveProposal, suggestTitle, initialPricing }: PrecificadorViewProps = {}) {
+export function PrecificadorView({ onApply, embedded, customers, onSaveProposal, suggestTitle, preferredCustomerId, initialPricing }: PrecificadorViewProps = {}) {
   const [tabela, setTabela] = useState<Modalidade[]>(loadTabela);
   const [servicos, setServicos] = useState<Atividade[]>(() =>
     initialPricing?.servicos?.length ? pricingToServicos(initialPricing) : [novoServico(loadTabela())]);
@@ -310,6 +312,7 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
         {showSave && onSaveProposal && (
           <SaveProposalDialog
             customers={customers ?? []}
+            preferredCustomerId={preferredCustomerId}
             suggestTitle={suggestTitle}
             onClose={() => setShowSave(false)}
             onConfirm={async (customerId, title) => {
@@ -323,14 +326,19 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
 }
 
 // --- Diálogo: salvar orçamento como proposta de um cliente ---------------
-function SaveProposalDialog({ customers, suggestTitle, onClose, onConfirm }: {
+function SaveProposalDialog({ customers, preferredCustomerId, suggestTitle, onClose, onConfirm }: {
   customers: PricerCustomer[];
+  preferredCustomerId?: string | null;
   suggestTitle?: (customerId: string) => string;
   onClose: () => void;
   onConfirm: (customerId: string, title: string) => Promise<void> | void;
 }) {
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? '');
-  const [title, setTitle] = useState(() => suggestTitle?.(customers[0]?.id ?? '') ?? 'Orçamento 1');
+  // Pré-seleciona o cliente sugerido (se válido); senão o primeiro da lista.
+  const initialId = (preferredCustomerId && customers.some(c => c.id === preferredCustomerId))
+    ? preferredCustomerId
+    : (customers[0]?.id ?? '');
+  const [customerId, setCustomerId] = useState(initialId);
+  const [title, setTitle] = useState(() => suggestTitle?.(initialId) ?? 'Orçamento 1');
   const [saving, setSaving] = useState(false);
 
   const onPickCustomer = (id: string) => {

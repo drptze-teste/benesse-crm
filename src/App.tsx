@@ -481,6 +481,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   // Rascunho carregado no precificador ao "usar como base" uma proposta salva.
   const [pricingDraft, setPricingDraft] = useState<NegotiationPricing | null>(null);
+  // Cliente pré-selecionado ao abrir o precificador a partir de uma negociação.
+  const [pricingPreferredCustomerId, setPricingPreferredCustomerId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Data State
@@ -833,7 +835,7 @@ export default function App() {
           <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} info="Visão geral de performance e KPIs" />
           <SidebarItem icon={Users} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} info="Gestão de contatos e funil de vendas" />
           <SidebarItem icon={Target} label="Clientes" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} info="Cadastro de clientes e histórico de negociações" />
-          <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setActiveTab('pricing'); }} info="Calcular valor de propostas (condomínio e laboral)" />
+          <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setPricingPreferredCustomerId(null); setActiveTab('pricing'); }} info="Calcular valor de propostas (condomínio e laboral)" />
           <SidebarItem icon={CheckSquare} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} info="Lembretes e ações pendentes" />
           <SidebarItem icon={MessageSquare} label="Interações" active={activeTab === 'interactions'} onClick={() => setActiveTab('interactions')} info="Histórico completo de contatos" />
           {profile?.role === 'admin' && (
@@ -1286,6 +1288,7 @@ export default function App() {
               >
                 <PrecificadorView
                   initialPricing={pricingDraft}
+                  preferredCustomerId={pricingPreferredCustomerId}
                   customers={leads.filter(l => l.type === 'customer').map(l => ({ id: l.id, name: l.name }))}
                   suggestTitle={(customerId) => `Orçamento ${negotiations.filter(n => n.customerId === customerId).length + 1}`}
                   onSaveProposal={async (customerId, title, value, pricing) => {
@@ -1456,6 +1459,12 @@ export default function App() {
                   setSelectedLead(null);
                   setActiveTab('pricing');
                 }}
+                onOpenPricer={(customerId) => {
+                  setPricingDraft(null);
+                  setPricingPreferredCustomerId(customerId);
+                  setSelectedLead(null);
+                  setActiveTab('pricing');
+                }}
                 funnelConfigs={funnelConfigs}
               />
             </motion.div>
@@ -1585,7 +1594,7 @@ export default function App() {
               </div>
               <nav className="flex-1 space-y-2">
                 <SidebarItem icon={Users} label="Meus Leads" active={activeTab === 'leads'} onClick={() => { setActiveTab('leads'); setIsSidebarOpen(false); }} />
-                <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setActiveTab('pricing'); setIsSidebarOpen(false); }} />
+                <SidebarItem icon={Calculator} label="Precificador" active={activeTab === 'pricing'} onClick={() => { setPricingDraft(null); setPricingPreferredCustomerId(null); setActiveTab('pricing'); setIsSidebarOpen(false); }} />
                 <SidebarItem icon={CheckSquare} label="Minhas Tarefas" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
                 <SidebarItem icon={MessageSquare} label="Interações" active={activeTab === 'interactions'} onClick={() => { setActiveTab('interactions'); setIsSidebarOpen(false); }} />
               </nav>
@@ -2132,7 +2141,7 @@ function AddLeadForm({ onCancel, onSuccess, userId, businessUnit, initialData, f
   );
 }
 
-function LeadDetailsView({ lead, interactions, documents, negotiations, user, profile, onClose, onLogInteraction, onEdit, onUseAsBase, funnelConfigs }: { lead: Lead; interactions: Interaction[]; documents: LeadDocument[]; negotiations: Negotiation[]; user: FirebaseUser | null; profile: UserProfile | null; onClose: () => void; onLogInteraction: () => void; onEdit: () => void; onUseAsBase: (pricing: NegotiationPricing) => void; funnelConfigs: Record<string, string[]> }) {
+function LeadDetailsView({ lead, interactions, documents, negotiations, user, profile, onClose, onLogInteraction, onEdit, onUseAsBase, onOpenPricer, funnelConfigs }: { lead: Lead; interactions: Interaction[]; documents: LeadDocument[]; negotiations: Negotiation[]; user: FirebaseUser | null; profile: UserProfile | null; onClose: () => void; onLogInteraction: () => void; onEdit: () => void; onUseAsBase: (pricing: NegotiationPricing) => void; onOpenPricer: (customerId: string) => void; funnelConfigs: Record<string, string[]> }) {
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
@@ -2625,10 +2634,11 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden"
           >
-            <AddNegotiationForm 
-              lead={lead} 
-              onSuccess={() => setShowAddNegotiation(false)} 
-              onCancel={() => setShowAddNegotiation(false)} 
+            <AddNegotiationForm
+              lead={lead}
+              onSuccess={() => setShowAddNegotiation(false)}
+              onCancel={() => setShowAddNegotiation(false)}
+              onOpenPricer={() => onOpenPricer(lead.id)}
             />
           </motion.div>
         </div>
@@ -3143,7 +3153,8 @@ const AddNegotiationForm: React.FC<{
   lead: Lead;
   onSuccess: () => void;
   onCancel: () => void;
-}> = ({ lead, onSuccess, onCancel }) => {
+  onOpenPricer: () => void;
+}> = ({ lead, onSuccess, onCancel, onOpenPricer }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -3152,8 +3163,6 @@ const AddNegotiationForm: React.FC<{
     status: 'Ongoing' as 'Won' | 'Lost' | 'Ongoing',
     description: ''
   });
-  const [showPricer, setShowPricer] = useState(false);
-  const [pricing, setPricing] = useState<NegotiationPricing | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3175,7 +3184,6 @@ const AddNegotiationForm: React.FC<{
         description: formData.description,
         createdAt: serverTimestamp(),
         createdByUserId: email,
-        ...(pricing ? { pricing } : {})
       });
       onSuccess();
     } catch (err) {
@@ -3210,39 +3218,22 @@ const AddNegotiationForm: React.FC<{
             />
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-gray-700">Valor (R$) *</label>
-              <button type="button"
-                className="text-xs font-bold text-[#003366] hover:underline inline-flex items-center gap-1"
-                onClick={() => setShowPricer(v => !v)}>
-                <Calculator size={13} /> {showPricer ? 'Fechar precificador' : 'Calcular com precificador'}
-              </button>
-            </div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">Valor (R$) *</label>
             <input
               type="number" required
               className="w-full p-2 bg-gray-50 border rounded-lg text-sm"
               value={formData.value}
               onChange={e => setFormData({...formData, value: e.target.value})}
             />
-            {pricing && !showPricer && (
-              <p className="mt-1 text-[11px] text-teal-700">
-                Valor calculado pelo precificador • margem {(pricing.margemLucro * 100).toFixed(1)}% • {pricing.servicos.length} serviço(s)
-              </p>
-            )}
+            <button type="button"
+              className="mt-2 text-xs font-bold text-[#003366] hover:underline inline-flex items-center gap-1"
+              onClick={onOpenPricer}>
+              <Calculator size={13} /> Calcular no Precificador
+            </button>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Para um orçamento detalhado, use o Precificador — lá você monta os serviços e salva como proposta deste cliente.
+            </p>
           </div>
-
-          {showPricer && (
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
-              <PrecificadorView
-                embedded
-                onApply={(valor, p) => {
-                  setFormData(prev => ({ ...prev, value: String(Math.round(valor)) }));
-                  setPricing(p);
-                  setShowPricer(false);
-                }}
-              />
-            </div>
-          )}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Data *</label>
             <input 

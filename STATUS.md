@@ -81,6 +81,9 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
 ## 📝 Detalhes a acertar (anote aqui)
 - [x] Botão "Novo Lead" estava escondido para admin → liberado (admin também cadastra lead manual)
 - [x] Origens incluem "Indicação" (já tinha) + "Contato antigo" e "E-mail"; padrão do form = Indicação
+- [x] Precificador embutido na negociação estava bugado (não abria) → trocado: botão **"Calcular no
+      Precificador"** leva à tela cheia; lá você monta o orçamento e **escolhe o cliente** em "Salvar
+      como proposta" (já vem pré-selecionado o cliente da negociação, mas dá pra trocar)
 - _(adicione itens conforme for testando o app)_
 
 ## 🔎 Referência rápida
