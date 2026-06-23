@@ -12,6 +12,7 @@ dist/
 *-adminsdk-*.json
 serviceAccount*.json
 service-account*.json
+secrets/
 
 # Logs e SO
 *.log

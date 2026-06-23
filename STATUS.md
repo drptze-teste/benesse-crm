@@ -52,8 +52,10 @@ Abordagem: propostas = collection `negotiations` do Firestore (doc minúsculo, s
       `vendedor1@benesse.com.br` / `vendedor2@benesse.com.br` (admin `drptze@gmail.com` já existe)
 - [ ] **IA do WhatsApp**: criar segredo `firebase apphosting:secrets:set GEMINI_API_KEY --project crm-benesse`,
       descomentar o bloco em `apphosting.yaml` e dar novo push
-- [ ] **Migração de dados** do projeto antigo `gen-lang-client-0070086689` ("RH-Benesse") → `crm-benesse`
-      (script Node com 2 service-account keys — decisão adiada)
+- [x] **Migração de dados** do antigo `gen-lang-client-0070086689` (banco `ai-studio-55ed0d53-...`) →
+      `crm-benesse` (default): **119 docs migrados** (35 leads, 35 interações, 12 tarefas, 5 docs,
+      28 negociações, 3 users, 1 funil), IDs preservados. Script: `scripts/migrate.mjs`.
+      ⚠️ Revogar as 2 service-account keys no console depois (IAM > contas de serviço).
 
 ## 📝 Detalhes a acertar (anote aqui)
 - _(adicione itens conforme for testando o app)_
