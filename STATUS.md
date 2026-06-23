@@ -53,11 +53,14 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
   - Callback URL: `https://crmbenesse--crm-benesse.us-east4.hosted.app/api/webhook/whatsapp`
   - Token de verificação: `benesse_crm_token` (env `WHATSAPP_VERIFY_TOKEN`)
 - [x] Validação de assinatura `X-Hub-Signature-256` (opcional até setar `WHATSAPP_APP_SECRET`)
-- [ ] **Lado da Meta (usuário):** criar app em developers.facebook.com → produto WhatsApp →
-      começar pelo **número de teste grátis** → configurar webhook (URL + token acima, assinar `messages`)
+- [x] **Meta configurada e TESTADA** (app 1657620641584932, empresa verificada): webhook conectado
+      (Callback URL + token), campo `messages` **assinado**. Teste do painel chegou no `whatsapp_inbox`. ✅
+      Número de teste da Meta: **+1 555 667 3785** (válido 90 dias).
+- [ ] **Publicar o app na Meta** para receber de clientes reais (em dev mode só recebe testes do painel)
 - [ ] Setar `WHATSAPP_APP_SECRET` (segredo) e mapear números reais → unidade de negócio
-- [ ] ⚠️ Decisão do número: migrar para a Cloud API **desativa o app normal do WhatsApp** nele —
-      avaliar usar um número dedicado. Escopo atual: **só receber** (resposta pelo app fica pra depois)
+- [ ] (Opcional) Setar `GEMINI_API_KEY` para o botão "processar com IA" extrair o lead da mensagem
+- [ ] ⚠️ Decisão do número real: migrar para a Cloud API **desativa o app do WhatsApp** nele (a linha/SIM
+      para ligações e SMS continua) — avaliar número dedicado. Escopo atual: **só receber**
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
