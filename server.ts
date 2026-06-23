@@ -2,11 +2,32 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import crypto from "crypto";
 import admin from 'firebase-admin';
 import { GoogleGenAI } from "@google/genai";
 
 // Modelo Gemini configurável por env; default estável e disponível.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+
+// Segredo do App da Meta (App Secret). Se configurado, valida a assinatura
+// X-Hub-Signature-256 de cada webhook — impede que terceiros forjem mensagens.
+// Enquanto não estiver setado, a validação é pulada (modo de testes).
+const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
+
+function isValidMetaSignature(req: any): boolean {
+  if (!WHATSAPP_APP_SECRET) return true; // sem segredo configurado → não valida (testes)
+  const signature = req.headers["x-hub-signature-256"];
+  if (!signature || !req.rawBody) return false;
+  const expected = "sha256=" + crypto
+    .createHmac("sha256", WHATSAPP_APP_SECRET)
+    .update(req.rawBody)
+    .digest("hex");
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 // Load config safely
 const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
@@ -28,7 +49,10 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json());
+  // Captura o corpo bruto (necessário para validar a assinatura HMAC da Meta).
+  app.use(express.json({
+    verify: (req: any, _res, buf) => { req.rawBody = buf; },
+  }));
 
   // API routes
   app.get("/api/health", (req, res) => {
@@ -102,6 +126,12 @@ async function startServer() {
 
   // WhatsApp Webhook Reception
   app.post("/api/webhook/whatsapp", async (req, res) => {
+    // Segurança: rejeita payloads sem assinatura válida da Meta (quando o App Secret está configurado).
+    if (!isValidMetaSignature(req)) {
+      console.warn("Webhook WhatsApp: assinatura inválida — rejeitado.");
+      return res.sendStatus(403);
+    }
+
     const body = req.body;
 
     if (body.object) {

@@ -47,6 +47,18 @@ Abordagem: propostas = collection `negotiations` do Firestore (doc minúsculo, s
 - [x] Botão **"Usar como base"** na proposta → clona num rascunho editável no precificador; salvar gera uma NOVA proposta (o original não é alterado)
 - [x] Data + hora exibidas em cada proposta na ficha do cliente
 
+## 📲 WhatsApp Business (captação de mensagens)
+Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe nesse formato).
+- [x] Webhook pronto e testado no app: `GET/POST /api/webhook/whatsapp` salva em `whatsapp_inbox`
+  - Callback URL: `https://crmbenesse--crm-benesse.us-east4.hosted.app/api/webhook/whatsapp`
+  - Token de verificação: `benesse_crm_token` (env `WHATSAPP_VERIFY_TOKEN`)
+- [x] Validação de assinatura `X-Hub-Signature-256` (opcional até setar `WHATSAPP_APP_SECRET`)
+- [ ] **Lado da Meta (usuário):** criar app em developers.facebook.com → produto WhatsApp →
+      começar pelo **número de teste grátis** → configurar webhook (URL + token acima, assinar `messages`)
+- [ ] Setar `WHATSAPP_APP_SECRET` (segredo) e mapear números reais → unidade de negócio
+- [ ] ⚠️ Decisão do número: migrar para a Cloud API **desativa o app normal do WhatsApp** nele —
+      avaliar usar um número dedicado. Escopo atual: **só receber** (resposta pelo app fica pra depois)
+
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
       `vendedor1@benesse.com.br` / `vendedor2@benesse.com.br` (admin `drptze@gmail.com` já existe)

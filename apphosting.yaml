@@ -28,3 +28,12 @@ env:
   #   secret: GEMINI_API_KEY
   #   availability:
   #     - RUNTIME
+
+  # App Secret da Meta — valida a assinatura dos webhooks do WhatsApp.
+  # Habilitar quando tiver o App da Meta criado:
+  #   firebase apphosting:secrets:set WHATSAPP_APP_SECRET --project crm-benesse
+  # Enquanto não setado, a validação de assinatura é pulada (modo de testes).
+  # - variable: WHATSAPP_APP_SECRET
+  #   secret: WHATSAPP_APP_SECRET
+  #   availability:
+  #     - RUNTIME
