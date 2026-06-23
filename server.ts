@@ -167,6 +167,66 @@ async function startServer() {
     }
   });
 
+  // Política de Privacidade (exigida pela Meta para publicar o app).
+  app.get("/privacidade", (_req, res) => {
+    res.type("html").send(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Política de Privacidade — Benesse Gestão Esportiva</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #1a1a1a; line-height: 1.6; max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { color: #003366; font-size: 1.7rem; }
+    h2 { color: #003366; font-size: 1.15rem; margin-top: 28px; }
+    a { color: #0055A4; }
+    .muted { color: #6c757d; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <h1>Política de Privacidade</h1>
+  <p class="muted">Benesse Gestão Esportiva · Última atualização: junho de 2026</p>
+
+  <p>Esta política descreve como a <strong>Benesse Gestão Esportiva</strong> ("Benesse", "nós")
+  coleta e utiliza dados de clientes e potenciais clientes em seu sistema de gestão de
+  relacionamento (CRM).</p>
+
+  <h2>1. Dados que coletamos</h2>
+  <ul>
+    <li>Dados de contato que você nos fornece: nome, telefone, e-mail e empresa.</li>
+    <li>Mensagens que você nos envia pelo nosso WhatsApp comercial.</li>
+    <li>Histórico de interações, propostas e negociações do seu atendimento.</li>
+  </ul>
+
+  <h2>2. Como usamos os dados</h2>
+  <ul>
+    <li>Responder às suas solicitações e dúvidas.</li>
+    <li>Elaborar e enviar propostas comerciais.</li>
+    <li>Gerenciar o relacionamento comercial e aprimorar nosso atendimento.</li>
+  </ul>
+
+  <h2>3. WhatsApp</h2>
+  <p>As mensagens enviadas ao nosso WhatsApp comercial são recebidas e armazenadas em nosso
+  sistema para que possamos atendê-lo. Utilizamos a API oficial do WhatsApp Business (Meta).</p>
+
+  <h2>4. Compartilhamento</h2>
+  <p>Não vendemos seus dados. Utilizamos provedores de tecnologia (como Google Firebase e Meta)
+  estritamente para operar o sistema.</p>
+
+  <h2>5. Seus direitos (LGPD)</h2>
+  <p>Conforme a Lei Geral de Proteção de Dados, você pode solicitar acesso, correção ou exclusão
+  dos seus dados a qualquer momento pelo contato abaixo.</p>
+
+  <h2>6. Retenção</h2>
+  <p>Mantemos os dados pelo tempo necessário ao relacionamento comercial e ao cumprimento de
+  obrigações legais.</p>
+
+  <h2>7. Contato</h2>
+  <p>Dúvidas ou solicitações sobre seus dados: <a href="mailto:zeluiz@benessegestaoesportiva.com.br">zeluiz@benessegestaoesportiva.com.br</a>.</p>
+</body>
+</html>`);
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
