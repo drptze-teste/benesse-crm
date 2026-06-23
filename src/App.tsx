@@ -1194,9 +1194,9 @@ export default function App() {
                     ) : (
                       <Button variant="outline" size="sm" icon={<Filter size={16} />}>Filtros</Button>
                     )}
-                    <Tooltip content={profile?.role === 'admin' ? "Visualização analítica dos pipelines" : "Filtre seus leads por status ou prioridade"}>
+                    <Tooltip content="Arraste os cards para mudar o estágio">
                       <span className="text-xs text-gray-400">
-                        {profile?.role === 'admin' ? "Modo Leitura" : "Dica: Arraste os cards para mudar o estágio"}
+                        Dica: Arraste os cards para mudar o estágio
                       </span>
                     </Tooltip>
                   </div>
@@ -1219,7 +1219,7 @@ export default function App() {
                   <DndContext 
                     sensors={sensors}
                     collisionDetection={closestCorners}
-                    onDragEnd={profile?.role === 'admin' ? undefined : handleDragEnd}
+                    onDragEnd={handleDragEnd}
                   >
                     <div className="flex gap-6 h-full min-w-max">
                       {currentStages.map(stage => (
@@ -1254,7 +1254,7 @@ export default function App() {
                               setShowLogInteraction(l);
                             }
                           }}
-                          disabled={profile?.role === 'admin'}
+                          disabled={false}
                         />
                       ))}
                     </div>
