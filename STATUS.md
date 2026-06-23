@@ -70,6 +70,8 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
       ⚠️ Revogar as 2 service-account keys no console depois (IAM > contas de serviço).
 
 ## 📝 Detalhes a acertar (anote aqui)
+- [x] Botão "Novo Lead" estava escondido para admin → liberado (admin também cadastra lead manual)
+- [x] Origens incluem "Indicação" (já tinha) + "Contato antigo" e "E-mail"; padrão do form = Indicação
 - _(adicione itens conforme for testando o app)_
 
 ## 🔎 Referência rápida

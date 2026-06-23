@@ -168,7 +168,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const BUSINESS_UNITS: BusinessUnit[] = ['Gestão Esportiva', 'Studio de Pilates'];
 const B2B_STAGES = ['Novo Contato', 'Qualificação', 'Proposta Enviada', 'Negociação', 'Fechado', 'Perdido'];
 const B2C_STAGES = ['Novo Contato', 'Qualificação', 'Proposta Enviada', 'Negociação', 'Fechado', 'Perdido'];
-const SOURCES = ['LinkedIn', 'Indicação', 'Telefone', 'Evento', 'Site', 'Anúncio Rede Social', 'Outro'];
+const SOURCES = ['Indicação', 'Contato antigo', 'E-mail', 'LinkedIn', 'Telefone', 'Evento', 'Site', 'Anúncio Rede Social', 'Outro'];
 const LOSS_REASONS = ['Preço', 'Concorrente', 'Timing', 'Sem Resposta', 'Não Qualificado'];
 
 const WHATSAPP_FUNNEL_MAPPING: Record<string, BusinessUnit> = {
@@ -1178,9 +1178,7 @@ export default function App() {
                         Configurar Funil
                       </Button>
                     )}
-                    {profile?.role !== 'admin' && (
-                      <Button icon={<Plus size={20} />} onClick={() => setShowAddLead(true)}>Novo Lead</Button>
-                    )}
+                    <Button icon={<Plus size={20} />} onClick={() => setShowAddLead(true)}>Novo Lead</Button>
                   </div>
                 </div>
 
@@ -1802,7 +1800,7 @@ function AddLeadForm({ onCancel, onSuccess, userId, businessUnit, initialData, f
     phone: initialData?.phone || '',
     email: initialData?.email || '',
     companyName: initialData?.companyName || '',
-    leadSource: initialData?.leadSource || 'LinkedIn',
+    leadSource: initialData?.leadSource || 'Indicação',
     priority: (initialData?.priority as LeadPriority) || 'Medium',
     temperature: (initialData?.temperature as LeadTemperature) || 'Warm',
     estimatedValue: initialData?.estimatedValue || 0,
