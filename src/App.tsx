@@ -168,7 +168,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const BUSINESS_UNITS: BusinessUnit[] = ['Gestão Esportiva', 'Studio de Pilates'];
 const B2B_STAGES = ['Novo Contato', 'Qualificação', 'Proposta Enviada', 'Negociação', 'Fechado', 'Perdido'];
 const B2C_STAGES = ['Novo Contato', 'Qualificação', 'Proposta Enviada', 'Negociação', 'Fechado', 'Perdido'];
-const SOURCES = ['Indicação', 'Contato antigo', 'E-mail', 'LinkedIn', 'Telefone', 'Evento', 'Site', 'Anúncio Rede Social', 'Outro'];
+const SOURCES = ['Indicação', 'Contato antigo', 'WhatsApp', 'E-mail', 'LinkedIn', 'Telefone', 'Evento', 'Site', 'Anúncio Rede Social', 'Outro'];
 const LOSS_REASONS = ['Preço', 'Concorrente', 'Timing', 'Sem Resposta', 'Não Qualificado'];
 
 const WHATSAPP_FUNNEL_MAPPING: Record<string, BusinessUnit> = {
@@ -393,7 +393,7 @@ const StatCard = ({ title, value, icon: Icon, trend, color = "blue", info }: { t
   </Card>
 );
 
-const WhatsAppInbox = ({ messages, onProcess }: { messages: WhatsAppMessage[], onProcess: (msg: WhatsAppMessage) => void }) => {
+const WhatsAppInbox = ({ messages, onProcess, onCreateLead, onIgnore }: { messages: WhatsAppMessage[], onProcess: (msg: WhatsAppMessage) => void, onCreateLead: (msg: WhatsAppMessage) => void, onIgnore: (msg: WhatsAppMessage) => void }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-6">
@@ -442,16 +442,25 @@ const WhatsAppInbox = ({ messages, onProcess }: { messages: WhatsAppMessage[], o
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      icon={<Activity size={16} />}
-                      onClick={() => onProcess(msg)}
-                      disabled={msg.status !== 'new'}
-                    >
-                      {msg.status === 'processed' ? 'Processado' : 'Processar com IA'}
-                    </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {msg.status === 'new' ? (
+                      <>
+                        <Button size="sm" icon={<Plus size={16} />} onClick={() => onCreateLead(msg)}>
+                          Criar lead
+                        </Button>
+                        <Button size="sm" variant="outline" icon={<Activity size={16} />}
+                          onClick={() => onProcess(msg)}>
+                          IA
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => onIgnore(msg)}>
+                          Ignorar
+                        </Button>
+                      </>
+                    ) : (
+                      <Badge variant={msg.status === 'processed' ? 'success' : 'neutral'}>
+                        {msg.status === 'processed' ? 'Virou lead' : 'Ignorado'}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -755,6 +764,28 @@ export default function App() {
     } catch (err) {
       console.error("Erro ao processar com IA:", err);
       alert("Não foi possível processar a mensagem com IA no momento.");
+    }
+  };
+
+  // Criar lead manualmente a partir de uma mensagem (sem IA): pré-preenche o
+  // formulário com o que já temos; você revisa e confirma.
+  const handleCreateLeadFromWhatsApp = (msg: WhatsAppMessage) => {
+    setPreFilledLeadData({
+      name: msg.name && msg.name !== 'Desconhecido' ? msg.name : '',
+      phone: msg.from,
+      businessUnit: WHATSAPP_FUNNEL_MAPPING[msg.businessPhoneNumber] || 'Gestão Esportiva',
+      leadSource: 'WhatsApp',
+      whatsappMsgId: msg.id,
+    });
+    setShowAddLead(true);
+  };
+
+  // Descartar uma mensagem que não vira lead.
+  const handleIgnoreWhatsApp = async (msg: WhatsAppMessage) => {
+    try {
+      await updateDoc(doc(db, 'whatsapp_inbox', msg.id), { status: 'ignored' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `whatsapp_inbox/${msg.id}`);
     }
   };
 
@@ -1347,9 +1378,11 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="max-w-4xl mx-auto"
               >
-                <WhatsAppInbox 
-                  messages={whatsappMessages} 
-                  onProcess={processWhatsAppWithIA} 
+                <WhatsAppInbox
+                  messages={whatsappMessages}
+                  onProcess={processWhatsAppWithIA}
+                  onCreateLead={handleCreateLeadFromWhatsApp}
+                  onIgnore={handleIgnoreWhatsApp}
                 />
               </motion.div>
             )}
@@ -1804,7 +1837,7 @@ function AddLeadForm({ onCancel, onSuccess, userId, businessUnit, initialData, f
     priority: (initialData?.priority as LeadPriority) || 'Medium',
     temperature: (initialData?.temperature as LeadTemperature) || 'Warm',
     estimatedValue: initialData?.estimatedValue || 0,
-    businessUnit: businessUnit,
+    businessUnit: (initialData?.businessUnit as BusinessUnit) || businessUnit,
     // B2B Specific
     segment: '',
     contactRole: '',

@@ -61,7 +61,10 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
 - [ ] **Adicionar um número REAL** à conta WhatsApp Business (o número de teste só fala com destinatários
       de teste). Só com número real é que clientes quaisquer conseguem mandar mensagem e cair no CRM.
 - [ ] Setar `WHATSAPP_APP_SECRET` (segredo) e mapear números reais → unidade de negócio
-- [ ] (Opcional) Setar `GEMINI_API_KEY` para o botão "processar com IA" extrair o lead da mensagem
+- [x] **Triagem manual da caixa de entrada**: cada mensagem tem **"Criar lead"** (manual, você revisa
+      e confirma), **"IA"** (opcional, pré-preenche via Gemini) e **"Ignorar"**. Nada vira lead sozinho —
+      você decide. Status vira "Virou lead" ou "Ignorado". Origem "WhatsApp" adicionada.
+- [ ] (Opcional) Setar `GEMINI_API_KEY` para o botão "IA" pré-preencher o lead automaticamente
 - [ ] ⚠️ Decisão do número real: migrar para a Cloud API **desativa o app do WhatsApp** nele (a linha/SIM
       para ligações e SMS continua) — avaliar número dedicado. Escopo atual: **só receber**
 
