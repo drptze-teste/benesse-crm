@@ -68,6 +68,18 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
 - [ ] ⚠️ Decisão do número real: migrar para a Cloud API **desativa o app do WhatsApp** nele (a linha/SIM
       para ligações e SMS continua) — avaliar número dedicado. Escopo atual: **só receber**
 
+## 📄 Proposta de serviços (documento) — planejado
+Objetivo: ao criar a proposta no precificador, gerar um **documento de proposta** na aba Documentos do
+lead, enviável por WhatsApp/e-mail (vendedor decide), com **registro no histórico** de como foi enviado.
+- **Modelo encontrado:** o precificador antigo já tem `gerarProposta` (em `precificador/src/services/
+  geminiService.ts`) que gera **proposta HTML completa** (marca Benesse, 8 seções) **+ e-mail** de
+  encaminhamento, a partir do resultado do cálculo + dados do cliente. Reaproveitar isso.
+- **Plano:** portar `gerarProposta` para o backend do CRM (`/api/ai/generate-proposal`) → botão "Gerar
+  proposta" → salva como `documents` (HTML em texto, sem precisar de Storage) → botões "Enviar por
+  WhatsApp" (wa.me) e "Enviar por e-mail" (mailto) → registra `interaction` tipo 'Proposal' com o canal.
+- **Dependências:** precisa do `GEMINI_API_KEY` (geração por IA). Formato pode ser refinado em cima do
+  modelo existente. Falta confirmar com o usuário.
+
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
       `vendedor1@benesse.com.br` / `vendedor2@benesse.com.br` (admin `drptze@gmail.com` já existe)
