@@ -56,7 +56,10 @@ Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe n
 - [x] **Meta configurada e TESTADA** (app 1657620641584932, empresa verificada): webhook conectado
       (Callback URL + token), campo `messages` **assinado**. Teste do painel chegou no `whatsapp_inbox`. ✅
       Número de teste da Meta: **+1 555 667 3785** (válido 90 dias).
-- [ ] **Publicar o app na Meta** para receber de clientes reais (em dev mode só recebe testes do painel)
+- [x] **App publicado na Meta (Ao vivo)** — política de privacidade servida pelo CRM em `/privacidade`,
+      categoria preenchida, requisitos OK. Webhooks de produção habilitados.
+- [ ] **Adicionar um número REAL** à conta WhatsApp Business (o número de teste só fala com destinatários
+      de teste). Só com número real é que clientes quaisquer conseguem mandar mensagem e cair no CRM.
 - [ ] Setar `WHATSAPP_APP_SECRET` (segredo) e mapear números reais → unidade de negócio
 - [ ] (Opcional) Setar `GEMINI_API_KEY` para o botão "processar com IA" extrair o lead da mensagem
 - [ ] ⚠️ Decisão do número real: migrar para a Cloud API **desativa o app do WhatsApp** nele (a linha/SIM
