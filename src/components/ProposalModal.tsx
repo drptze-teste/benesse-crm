@@ -37,14 +37,34 @@ function linhasFromPricing(p: NegotiationPricing): (PropostaItem & { horasDecima
   });
 }
 
-export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }: {
+// Rascunho estruturado salvo no documento — permite reabrir e editar a proposta.
+export interface ProposalDraft {
+  capaId: number;
+  contratante: { nome: string; cnpj: string; endereco: string; cidade: string; uf: string; cep: string };
+  presetId: string;
+  escopo: string;
+  responsabilidades: string;
+  agradecimento: string;
+  vigencia: string;
+  localidades: string;
+  itens: (PropostaItem & { horasDecimal: number })[];
+  incluirGrade: boolean;
+  gradeSlots: GradeSlot[];
+  resumo?: { totalHoras: number; subtotal: number; impostos: number; total: number } | null;
+}
+
+const AGRADECIMENTO_PADRAO = 'Agradecemos a oportunidade de apresentar esta proposta e reforçamos nosso compromisso com a saúde, o bem-estar e a qualidade de vida das pessoas atendidas. Colocamo-nos à disposição para esclarecer qualquer dúvida e seguir juntos nesta parceria.';
+
+export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer, initialData, editingDocId }: {
   lead: Lead;
   onClose: () => void;
   onSaved?: () => void;
   pricing?: NegotiationPricing | null;
   onOpenPricer?: () => void;
+  initialData?: ProposalDraft | null;
+  editingDocId?: string | null;
 }) {
-  const [contratante, setContratante] = useState({
+  const [contratante, setContratante] = useState(() => initialData?.contratante ?? {
     nome: lead.companyName || lead.name || '',
     cnpj: lead.cnpj || '',
     endereco: lead.endereco || '',
@@ -52,13 +72,13 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
     uf: lead.uf || '',
     cep: lead.cep || '',
   });
-  const [capaId, setCapaId] = useState(1); // 1..3 ou 0 = sem capa de imagem
-  const [presetId, setPresetId] = useState('');
-  const [escopo, setEscopo] = useState(ESCOPO_PADRAO);
-  const [responsabilidades, setResponsabilidades] = useState('');
-  const [vigencia, setVigencia] = useState(lead.vigencia || 'O presente contrato terá vigência correspondente à data de execução do serviço (ação pontual).');
-  const [localidades, setLocalidades] = useState('');
-  const [agradecimento, setAgradecimento] = useState('Agradecemos a oportunidade de apresentar esta proposta e reforçamos nosso compromisso com a saúde, o bem-estar e a qualidade de vida das pessoas atendidas. Colocamo-nos à disposição para esclarecer qualquer dúvida e seguir juntos nesta parceria.');
+  const [capaId, setCapaId] = useState(() => initialData?.capaId ?? 1); // 1..3 ou 0 = sem capa
+  const [presetId, setPresetId] = useState(() => initialData?.presetId ?? '');
+  const [escopo, setEscopo] = useState(() => initialData?.escopo ?? ESCOPO_PADRAO);
+  const [responsabilidades, setResponsabilidades] = useState(() => initialData?.responsabilidades ?? '');
+  const [vigencia, setVigencia] = useState(() => initialData?.vigencia ?? lead.vigencia ?? 'O presente contrato terá vigência correspondente à data de execução do serviço (ação pontual).');
+  const [localidades, setLocalidades] = useState(() => initialData?.localidades ?? '');
+  const [agradecimento, setAgradecimento] = useState(() => initialData?.agradecimento ?? AGRADECIMENTO_PADRAO);
 
   const aplicarPreset = (id: string) => {
     setPresetId(id);
@@ -66,21 +86,25 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
     if (p) { setEscopo(p.escopo); setResponsabilidades(p.responsabilidades); if (p.vigencia) setVigencia(p.vigencia); }
   };
   const [itens, setItens] = useState<(PropostaItem & { horasDecimal: number })[]>(
-    () => pricing?.servicos?.length ? linhasFromPricing(pricing) : [novaLinha()]);
-  const [incluirGrade, setIncluirGrade] = useState(false);
-  const [gradeSlots, setGradeSlots] = useState<GradeSlot[]>([novoGradeSlot(), novoGradeSlot()]);
+    () => initialData?.itens?.length ? initialData.itens
+      : pricing?.servicos?.length ? linhasFromPricing(pricing) : [novaLinha()]);
+  const [incluirGrade, setIncluirGrade] = useState(() => initialData?.incluirGrade ?? false);
+  const [gradeSlots, setGradeSlots] = useState<GradeSlot[]>(() => initialData?.gradeSlots?.length ? initialData.gradeSlots : [novoGradeSlot(), novoGradeSlot()]);
   const [saving, setSaving] = useState(false);
 
   const setGradeLabel = (i: number, v: string) => setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, label: v } : s));
   const setGradeCell = (i: number, d: number, v: string) =>
     setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, cells: s.cells.map((c, di) => di === d ? v : c) } : s));
 
-  // Resumo financeiro puxado do precificador (sem custos/margens internas).
-  const resumo = pricing ? (() => {
+  // Resumo financeiro: do rascunho salvo (edição) ou puxado do precificador.
+  const resumo = initialData?.resumo ?? (pricing ? (() => {
     const total = pricing.valorFinal || 0;
     const impostos = total * ISS_RATE / (1 + ISS_RATE);
     return { totalHoras: pricing.totalHoras || 0, subtotal: total - impostos, impostos, total };
-  })() : undefined;
+  })() : undefined);
+
+  // Aulas/modalidades (da tabela de investimento) usadas como sugestão na grade.
+  const modalidadesGrade = Array.from(new Set(itens.map(i => i.item.trim()).filter(Boolean)));
 
   const itensCalc: PropostaItem[] = useMemo(() => itens.map(i => ({
     item: i.item, data: i.data, profissionais: i.profissionais, dias: i.dias,
@@ -117,16 +141,30 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
         resumo,
       });
 
-      // Salva a proposta como documento do lead
-      await addDoc(collection(db, 'documents'), {
-        leadId: lead.id,
-        title: `Proposta — ${contratante.nome}`,
-        type: 'Proposal',
-        fileUrl: '',
-        content: html,
-        uploadedByUserId: email,
-        uploadedAt: new Date().toISOString(),
-      });
+      // Rascunho estruturado (pra reabrir e editar depois).
+      const draft: ProposalDraft = {
+        capaId, contratante, presetId, escopo, responsabilidades, agradecimento,
+        vigencia, localidades, itens, incluirGrade, gradeSlots, resumo: resumo ?? null,
+      };
+      const title = `Proposta — ${contratante.nome}`;
+
+      if (editingDocId) {
+        // Edição: atualiza o mesmo documento
+        await updateDoc(doc(db, 'documents', editingDocId), {
+          title, content: html, data: draft, uploadedAt: new Date().toISOString(),
+        });
+      } else {
+        await addDoc(collection(db, 'documents'), {
+          leadId: lead.id,
+          title,
+          type: 'Proposal',
+          fileUrl: '',
+          content: html,
+          data: draft,
+          uploadedByUserId: email,
+          uploadedAt: new Date().toISOString(),
+        });
+      }
 
       // Guarda os dados do contratante no lead para reutilizar
       await updateDoc(doc(db, 'leads', lead.id), {
@@ -155,7 +193,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
         onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-bold text-lg flex items-center gap-2 text-[#003366]">
-            <FileText size={20} /> Gerar Proposta
+            <FileText size={20} /> {editingDocId ? 'Editar Proposta' : 'Gerar Proposta'}
           </h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
         </div>
@@ -257,6 +295,12 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
             </label>
             {incluirGrade && (
               <div className="space-y-2">
+                <datalist id="aulas-precificador">
+                  {modalidadesGrade.map(m => <option key={m} value={m} />)}
+                </datalist>
+                {modalidadesGrade.length > 0 && (
+                  <p className="text-[11px] text-gray-400">Dica: ao clicar numa célula, aparecem as aulas do orçamento ({modalidadesGrade.join(', ')}).</p>
+                )}
                 <div className="overflow-x-auto">
                   <table className="border-collapse w-full min-w-[640px]">
                     <thead>
@@ -275,7 +319,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
                           </td>
                           {DIAS_GRADE.map((_, d) => (
                             <td key={d} className="border border-gray-200 p-1">
-                              <input className={cn(inputCls, 'px-1 py-1')} placeholder="—"
+                              <input className={cn(inputCls, 'px-1 py-1')} placeholder="—" list="aulas-precificador"
                                 value={s.cells[d]} onChange={e => setGradeCell(i, d, e.target.value)} />
                             </td>
                           ))}
@@ -359,7 +403,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancelar</Button>
             <Button variant="primary" loading={saving} icon={<FileText size={16} />} onClick={handleGenerate}>
-              Gerar e salvar em Documentos
+              {editingDocId ? 'Salvar alterações' : 'Gerar e salvar em Documentos'}
             </Button>
           </div>
         </div>

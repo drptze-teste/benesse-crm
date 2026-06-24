@@ -2147,6 +2147,7 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [editProposal, setEditProposal] = useState<{ docId: string; data: any } | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -2663,6 +2664,10 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-wrap justify-end">
+                      {doc.type === 'Proposal' && doc.data && (
+                        <Button variant="ghost" size="sm" className="px-2 text-xs font-bold text-[#003366]"
+                          onClick={() => setEditProposal({ docId: doc.id, data: doc.data })}>Editar</Button>
+                      )}
                       {(doc.type === 'Proposal' || doc.type === 'Schedule') && (
                         <>
                           <Button variant="ghost" size="sm" className="px-2 text-xs font-bold text-gray-600"
@@ -2732,14 +2737,16 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
         </div>
       )}
 
-      {showProposal && (
+      {(showProposal || editProposal) && (
         <ProposalModal
           lead={lead}
           pricing={negotiations
             .filter(n => n.customerId === lead.id && n.pricing)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.pricing}
+          initialData={editProposal?.data}
+          editingDocId={editProposal?.docId}
           onOpenPricer={() => onOpenPricer(lead.id)}
-          onClose={() => setShowProposal(false)}
+          onClose={() => { setShowProposal(false); setEditProposal(null); }}
         />
       )}
 

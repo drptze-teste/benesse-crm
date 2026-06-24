@@ -93,6 +93,11 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 - Na aba Documentos, propostas e quadros têm **Word** (baixa `.doc` HTML editável, abre no Word) e **PDF**
   (abre o documento e dispara a impressão → salvar como PDF). O HTML gerado tem botão "Imprimir / PDF".
 
+### Proposta editável + aulas na grade (2026-06-23)
+- O documento da proposta guarda o **rascunho estruturado** (`data` = ProposalDraft) além do HTML.
+  Botão **"Editar"** reabre o modal pré-preenchido → "Salvar alterações" **atualiza o mesmo documento**.
+- No quadro de horários da proposta, as **modalidades do orçamento** viram sugestões (datalist) nas células.
+
 ### WhatsApp Business (Cloud API oficial da Meta)
 - Webhook `GET/POST /api/webhook/whatsapp` salva em `whatsapp_inbox`. Validação de assinatura `X-Hub-Signature-256` (ativa quando `WHATSAPP_APP_SECRET` setado).
 - **Meta configurada, app PUBLICADO (Ao vivo)**, webhook conectado + campo `messages` assinado, teste do painel chegou no CRM. ✅

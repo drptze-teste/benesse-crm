@@ -93,7 +93,8 @@ export interface LeadDocument {
   title: string;
   type: 'PDF' | 'Drive Link' | 'Contract' | 'Proposal' | 'Schedule';
   fileUrl: string;
-  content?: string;        // HTML da proposta gerada (quando type === 'Proposal')
+  content?: string;        // HTML da proposta/quadro gerado
+  data?: any;              // rascunho estruturado (ProposalDraft) p/ reabrir e editar
   versionNote?: string;
   uploadedByUserId: string;
   uploadedAt: string;
