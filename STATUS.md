@@ -1,141 +1,117 @@
-# Benesse CRM — Status & Ajustes
+# Benesse CRM — Status & Handoff
 
-> Documento vivo de acompanhamento do app. Use como base para registrar pendências,
-> decisões e detalhes a acertar. Atualizado conforme o trabalho avança.
+> Documento vivo e completo do projeto. Ponto de retomada, decisões, arquitetura,
+> pendências e pegadinhas. **Leia "Onde paramos" e "Pendências" primeiro.**
 
-_Última atualização: 2026-06-22_
+_Última atualização: 2026-06-23_
+
+---
 
 ## 🌐 Produção
 - **App ao vivo:** https://crmbenesse--crm-benesse.us-east4.hosted.app
-- **Repo:** https://github.com/drptze-teste/benesse-crm (deploy automático no push para `main`)
-- **Firebase:** projeto `crm-benesse` · Firestore banco `(default)` · App Hosting back-end `crmbenesse` (us-east4)
+- **Repo:** https://github.com/drptze-teste/benesse-crm — **deploy automático no push para `main`** (App Hosting)
+- **Firebase:** projeto **`crm-benesse`** · Firestore banco **`(default)`** · App Hosting back-end **`crmbenesse`** (região us-east4)
+- **Login:** admin `drptze@gmail.com` (já existe, via e-mail/senha e Google). Vendedores ainda não criados.
+- **Local:** `npm install` → `npm run dev` (tsx server.ts, porta 3000). `npm run build` = vite (client) + esbuild (server).
 
-## ⏸️ Onde paramos — sessão 2026-06-22
-Construído nesta sessão (tudo no ar, último commit `d7e1170`):
-1. Projeto unificado `benesse-crm` criado do zero (GitHub + Firebase `crm-benesse`), publicado via App Hosting.
-2. Correções de persistência do CRM + Gemini movido pro backend.
-3. Precificador embutido no CRM (aba + dentro da negociação).
-4. Precificador: moeda BR (R$ 41,55), markup 10–90% com meio %, lucro/margem líquida, encargo CLT editável (65%).
-5. Propostas anexadas ao cliente como histórico imutável + "Usar como base" (clona em rascunho novo).
+## ⏸️ Onde paramos — 2026-06-23
+Tudo no ar. Último grande tema: **proposta de serviços como documento** + **quadro de horários** + **WhatsApp publicado**.
+**Retomar amanhã por aqui (teste do usuário em andamento):**
+- [ ] Testar o fluxo completo de proposta: **Precificador → "Salvar como proposta" (cria a negociação com cálculo) → abrir cliente → Documentos → "Gerar Proposta"** (agora puxa o cálculo) → escolher modelo de escopo → revisar → **Enviar (WhatsApp/e-mail)**. Validar tabela + resumo.
+- [ ] Testar o **Quadro de Horários** (condomínio).
+- [ ] Próximos sugeridos: **Exportar PDF com 1 clique**; (opcional) **IA** pra redigir escopo/e-mail.
 
-**Retomar amanhã por aqui:**
-- [ ] **Testar o fluxo de propostas** com um cliente real (converter um lead em Cliente → Precificador → "Salvar como proposta" → "Usar como base"). Validar na tela.
-- [ ] Depois, decidir entre: criar usuários vendedores · ativar IA do WhatsApp · migração de dados (ver Pendências).
+---
 
-## ✅ Pronto
-- Projeto unificado (CRM + Precificador) apontando para o Firebase próprio `crm-benesse`
-- Firestore criado; Auth e-mail/senha + Google ativos; regras + índices deployados
-- App Hosting publicando do repo `benesse-crm/main` (build verificado, login renderiza sem erros)
-- Precificador como aba isolada + embutido na criação de negociação (grava `pricing`)
-- Correções de persistência (writes com tratamento de erro, `source` unificado, `updatedAt` no create, regra de `documents` p/ admin/manager)
-- Gemini movido para o backend (`/api/ai/*`), chave fora do bundle
+## 🗺️ Arquitetura / mapa de arquivos
+```
+src/App.tsx                         — app inteiro: telas, funil Kanban, formulários, lógica (arquivo grande)
+src/firebase.ts                     — init Firebase (banco default; config em firebase-applet-config.json)
+src/types.ts                        — modelos (Lead, Negotiation, NegotiationPricing, LeadDocument, etc.)
+src/constants.ts                    — APP_USERS (perfis hardcoded por e-mail)
+src/components/UI.tsx               — design system (Button, Card, Badge, cn)
+src/components/PrecificadorView.tsx — precificador (aba + lógica de salvar proposta / usar como base)
+src/components/ProposalModal.tsx    — gerar proposta (documento)
+src/components/ScheduleModal.tsx    — gerar quadro de horários
+src/pricing/                        — núcleo puro do cálculo: pricingUtils (calcularProposta), constants, types
+src/proposal/proposalTemplate.ts    — HTML da proposta (template fixo Benesse + slots)
+src/proposal/escopos.ts             — biblioteca de 7 escopos reais (condomínio/empresa/evento)
+src/proposal/scheduleTemplate.ts    — HTML do quadro de horários (grade semanal)
+server.ts                           — Express: webhook WhatsApp + /api/ai/* + /privacidade + /proposta/:id
+scripts/migrate.mjs                 — migração de dados do projeto antigo
+firestore.rules / firestore.indexes.json / apphosting.yaml
+```
 
-## 🔧 Ajustes em andamento
-- [x] Precificador: inputs de valor em moeda BR (R$ 41,55 — vírgula, 2 casas)
-- [x] Precificador: markup aceita meio por cento (ex.: 65,5%)
-- [x] Precificador: markup começa em 10% (era 30%)
-- [x] Precificador: resultado mostra **lucro líquido** (R$) e **margem líquida** (já descontados comissão e ISS)
-- [x] Precificador: encargo CLT ajustado de 82,7% → **65%** (confirmar valor exato com o contador)
-- [x] Precificador: encargo CLT **editável** no painel da Tabela de custos (salvo no dispositivo); aplica só a serviços CLT (CLT e PJ podem coexistir no mesmo orçamento)
+## 🔑 Coleções Firestore
+`leads` · `interactions` · `tasks` · `documents` · `negotiations` · `users` · `funnel_configs` · `whatsapp_inbox`.
+- Proposta/orçamento = doc em **`negotiations`** com campo `pricing` (snapshot do cálculo).
+- Proposta gerada (HTML) e Quadro de horários = docs em **`documents`** com `content` (HTML) e `type` `Proposal`/`Schedule`.
+- Regras versionadas em `firestore.rules` (deployadas). Índice composto de `interactions` em `firestore.indexes.json`.
 
-## 🧭 Propostas/orçamentos anexados ao cliente
-Abordagem: propostas = collection `negotiations` do Firestore (doc minúsculo, sem arquivos/Storage).
-- [x] Snapshot COMPLETO no `pricing` (serviços + markup + encargo) para reabrir igual
-- [x] Aba Precificador: botão **"Salvar como proposta"** → escolhe cliente + nome (padrão "Orçamento N")
-- [x] Dentro do cliente: "Nova Negociação" com precificador embutido (já existia)
-- [x] Propostas são **histórico imutável**: cada save é um registro novo com data/hora (createdAt)
-- [x] Botão **"Usar como base"** na proposta → clona num rascunho editável no precificador; salvar gera uma NOVA proposta (o original não é alterado)
-- [x] Data + hora exibidas em cada proposta na ficha do cliente
+---
 
-## 📲 WhatsApp Business (captação de mensagens)
-Abordagem: **WhatsApp Cloud API oficial da Meta** (o webhook do app já recebe nesse formato).
-- [x] Webhook pronto e testado no app: `GET/POST /api/webhook/whatsapp` salva em `whatsapp_inbox`
-  - Callback URL: `https://crmbenesse--crm-benesse.us-east4.hosted.app/api/webhook/whatsapp`
-  - Token de verificação: `benesse_crm_token` (env `WHATSAPP_VERIFY_TOKEN`)
-- [x] Validação de assinatura `X-Hub-Signature-256` (opcional até setar `WHATSAPP_APP_SECRET`)
-- [x] **Meta configurada e TESTADA** (app 1657620641584932, empresa verificada): webhook conectado
-      (Callback URL + token), campo `messages` **assinado**. Teste do painel chegou no `whatsapp_inbox`. ✅
-      Número de teste da Meta: **+1 555 667 3785** (válido 90 dias).
-- [x] **App publicado na Meta (Ao vivo)** — política de privacidade servida pelo CRM em `/privacidade`,
-      categoria preenchida, requisitos OK. Webhooks de produção habilitados.
-- [ ] **Adicionar um número REAL** à conta WhatsApp Business (o número de teste só fala com destinatários
-      de teste). Só com número real é que clientes quaisquer conseguem mandar mensagem e cair no CRM.
-- [ ] Setar `WHATSAPP_APP_SECRET` (segredo) e mapear números reais → unidade de negócio
-- [x] **Triagem manual da caixa de entrada**: cada mensagem tem **"Criar lead"** (manual, você revisa
-      e confirma), **"IA"** (opcional, pré-preenche via Gemini) e **"Ignorar"**. Nada vira lead sozinho —
-      você decide. Status vira "Virou lead" ou "Ignorado". Origem "WhatsApp" adicionada.
-- [ ] (Opcional) Setar `GEMINI_API_KEY` para o botão "IA" pré-preencher o lead automaticamente
-- [ ] ⚠️ Decisão do número real: migrar para a Cloud API **desativa o app do WhatsApp** nele (a linha/SIM
-      para ligações e SMS continua) — avaliar número dedicado. Escopo atual: **só receber**
+## ✅ Pronto (por área)
 
-## 📄 Proposta de serviços (documento) — planejado
-Objetivo: ao criar a proposta no precificador, gerar um **documento de proposta** na aba Documentos do
-lead, enviável por WhatsApp/e-mail (vendedor decide), com **registro no histórico** de como foi enviado.
-- **Modelo encontrado:** o precificador antigo já tem `gerarProposta` (em `precificador/src/services/
-  geminiService.ts`) que gera **proposta HTML completa** (marca Benesse, 8 seções) **+ e-mail** de
-  encaminhamento, a partir do resultado do cálculo + dados do cliente. Reaproveitar isso.
-- **Plano:** portar `gerarProposta` para o backend do CRM (`/api/ai/generate-proposal`) → botão "Gerar
-  proposta" → salva como `documents` (HTML em texto, sem precisar de Storage) → botões "Enviar por
-  WhatsApp" (wa.me) e "Enviar por e-mail" (mailto) → registra `interaction` tipo 'Proposal' com o canal.
-- **Dependências:** precisa do `GEMINI_API_KEY` (geração por IA). Formato pode ser refinado em cima do
-  modelo existente. Falta confirmar com o usuário.
+### Base / infra
+- Projeto unificado `benesse-crm` criado do zero → Firebase `crm-benesse`, publicado via App Hosting (deploy no push).
+- Firestore criado; Auth e-mail/senha + Google ativos; regras + índices deployados.
+- **Gemini movido para o backend** (`/api/ai/*`) — chave fora do bundle do browser. Modelo `gemini-2.0-flash` (env `GEMINI_MODEL`).
+- Correções de persistência: writes com try/catch + feedback; `source` unificado (lê `leadSource` antigo); `updatedAt` no create; regra de `documents` libera admin/manager; guard de sessão na negociação.
+- **Admin com acesso total** ao funil (arrasta cards) pra testar tudo. "Novo Lead" visível pro admin.
+- Origens de lead: Indicação, Contato antigo, WhatsApp, E-mail, LinkedIn, Telefone, Evento, Site, Anúncio, Outro (padrão Indicação).
 
-### ✅ v1 construída (sem IA) — 2026-06-23
-Modelo real do usuário (orçamentos no Drive) reproduzido como **template fixo** + campos variáveis:
-- `src/proposal/proposalTemplate.ts` — `buildProposalHtml()` com as partes fixas da Benesse
-  (proponente, representante legal, apresentação, 6 diferenciais, forma de pagamento, validade 60d) e
-  slots variáveis (contratante, escopo, vigência, localidades, tabela de investimento).
-- `src/components/ProposalModal.tsx` — botão **"Gerar Proposta"** na aba Documentos do lead → modal com
-  contratante (pré-preenchido), **escopo editável + alerta "revise antes de enviar"**, vigência,
-  localidades e tabela de investimento (vendedor digita **valor/hora**). Gera o HTML, salva como
-  `documents` (type 'Proposal', `content`=HTML) e grava CNPJ/endereço/cidade/UF/CEP/vigência no lead.
-- Documentos lista as propostas (ícone teal "Proposta") com **"Ver"** (abre o HTML).
-- Campos novos no tipo Lead: cnpj, endereco, cidade, uf, cep, vigencia (capturados/persistidos pelo modal).
-- **Biblioteca de modelos** (`src/proposal/escopos.ts`): 7 escopos REAIS extraídos dos orçamentos do
-  Drive — Condomínio (Assessoria Esportiva 12m), Empresa (Laboral, Riscos Psicossociais, Saúde no
-  Trabalho), Evento (Quick Massage, Yoga, Laboral+Blitz) + "Em branco". O modal tem um seletor
-  "Modelo de serviço" que carrega escopo + responsabilidades + vigência (todos editáveis).
-### ✅ Fase 2 — envio + registro (2026-06-23)
-- Backend serve cada proposta por **link público**: `GET /proposta/:id` (id não-adivinhável do Firestore).
-- Na aba Documentos, cada proposta tem **WhatsApp** (abre wa.me do cliente com o link) e **E-mail**
-  (abre o e-mail com assunto/corpo + link). Ao enviar, registra uma **interação** "Proposta enviada
-  por WhatsApp/E-mail" no histórico do lead. "Ver" abre o link público.
-- **Pendente:** exportar PDF com 1 clique; (opcional) IA p/ redigir o texto.
+### Precificador (lógica validada pelo usuário ✅)
+- Núcleo puro em `src/pricing/pricingUtils.ts` (`calcularProposta`).
+- Inputs em moeda BR (R$ 41,55 — vírgula, 2 casas). Markup **10–90%** com meio % (65,5%).
+- **Lucro líquido (R$)** e **margem líquida** (descontados comissão e ISS) no resultado.
+- **Encargo CLT editável** (padrão 65% — confirmar com contador). Aplica só a serviços CLT; CLT e PJ coexistem no mesmo orçamento.
+- **CLT vs PJ corrigido** (PJ não leva encargo), parsing pt-BR, guarda de divisão por zero.
 
-### ✅ Quadro de horários (condomínios) — construído no app
-Grade semanal editável (Seg–Sáb × horários × aulas) — `src/proposal/scheduleTemplate.ts` +
-`src/components/ScheduleModal.tsx`. Botão **"Quadro de Horários"** na aba Documentos → editor de grade
-(adiciona horários, preenche a aula por dia) → salva como `documents` type 'Schedule' (HTML).
-Aparece em Documentos (ícone indigo) com Ver (link público) e Enviar (WhatsApp/e-mail) + registro.
-Feito no app (não Canva) por ser editável, linkável e integrado. Dias fixos Seg–Sáb (Dom dá pra add depois).
+### Propostas anexadas ao cliente (histórico imutável)
+- "Salvar como proposta" (aba Precificador OU dentro do cliente) → cria `negotiation` com `pricing`. Nome padrão "Orçamento N".
+- **Histórico imutável:** cada save é registro novo com data/hora. **"Usar como base"** clona num rascunho editável (gera NOVA proposta; original intacto).
+- "Calcular no Precificador" (na Nova Negociação) **abre a tela cheia** do precificador (o embutido bugado foi removido).
 
-## 📋 Pendências
-- [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
-      `vendedor1@benesse.com.br` / `vendedor2@benesse.com.br` (admin `drptze@gmail.com` já existe)
-- [ ] **IA do WhatsApp**: criar segredo `firebase apphosting:secrets:set GEMINI_API_KEY --project crm-benesse`,
-      descomentar o bloco em `apphosting.yaml` e dar novo push
-- [x] **Migração de dados** do antigo `gen-lang-client-0070086689` (banco `ai-studio-55ed0d53-...`) →
-      `crm-benesse` (default): **119 docs migrados** (35 leads, 35 interações, 12 tarefas, 5 docs,
-      28 negociações, 3 users, 1 funil), IDs preservados. Script: `scripts/migrate.mjs`.
-      ⚠️ Revogar as 2 service-account keys no console depois (IAM > contas de serviço).
+### Proposta de serviços = DOCUMENTO (modelo real Benesse)
+- `buildProposalHtml` reproduz o modelo real (partes fixas: proponente, representante legal, apresentação, 6 diferenciais, forma de pagamento, validade 60d) + slots variáveis.
+- Botão **"Gerar Proposta"** na aba Documentos → modal: contratante (pré-preenchido), **seletor de Modelo de serviço** (7 escopos reais), escopo/responsabilidades/vigência editáveis (⚠️ alerta de revisão), localidades.
+- **Puxa o cálculo do precificador** (negociação mais recente do cliente com `pricing`): tabela de investimento pré-preenchida (serviços + valor/hora sugerido = valor final ÷ horas, editável) + **resumo** (total de horas, subtotal, impostos ISS, valor total). Sem custos/margens internas.
+- Campos novos no Lead: cnpj, endereco, cidade, uf, cep, vigencia (capturados e salvos pelo modal).
+- Salva como `documents` type `Proposal` (`content`=HTML). Lista em Documentos com **Ver** (link público `/proposta/:id`) + **Enviar WhatsApp/E-mail** → registra interação no histórico.
 
-## 🔗 Proposta puxa o cálculo do precificador (2026-06-23)
-- O modal "Gerar Proposta" agora **pré-preenche a tabela de investimento** com os serviços do precificador
-  (a partir da negociação mais recente do cliente que tem `pricing`): item=modalidade, dias, horas,
-  e **valor/hora sugerido = valor final ÷ total de horas** (editável).
-- Adiciona um **resumo do investimento**: Total de horas/mês · Subtotal · Impostos (ISS, derivado do
-  valor final) · **Valor Total Mensal** — tanto no modal quanto no HTML gerado. Sem custos/margens internas.
+### Quadro de horários (condomínios)
+- Botão **"Quadro de Horários"** na aba Documentos → editor de grade (Seg–Sáb × horários × aulas) → salva como `documents` type `Schedule`. Ver/Enviar igual à proposta. Feito no app (não Canva).
 
-## 📝 Detalhes a acertar (anote aqui)
-- [x] Botão "Novo Lead" estava escondido para admin → liberado (admin também cadastra lead manual)
-- [x] Origens incluem "Indicação" (já tinha) + "Contato antigo" e "E-mail"; padrão do form = Indicação
-- [x] Precificador embutido na negociação estava bugado (não abria) → trocado: botão **"Calcular no
-      Precificador"** leva à tela cheia; lá você monta o orçamento e **escolhe o cliente** em "Salvar
-      como proposta" (já vem pré-selecionado o cliente da negociação, mas dá pra trocar)
-- _(adicione itens conforme for testando o app)_
+### WhatsApp Business (Cloud API oficial da Meta)
+- Webhook `GET/POST /api/webhook/whatsapp` salva em `whatsapp_inbox`. Validação de assinatura `X-Hub-Signature-256` (ativa quando `WHATSAPP_APP_SECRET` setado).
+- **Meta configurada, app PUBLICADO (Ao vivo)**, webhook conectado + campo `messages` assinado, teste do painel chegou no CRM. ✅
+- **Triagem manual:** cada mensagem na aba WhatsApp tem "Criar lead" (manual), "IA" (opcional) e "Ignorar". Nada vira lead sozinho.
+
+### Migração de dados ✅
+- **119 docs** migrados do projeto antigo → `crm-benesse` (IDs preservados). Script `scripts/migrate.mjs`.
+
+---
+
+## 📋 Pendências (abertas)
+- [ ] **Número REAL do WhatsApp:** o número de teste (+1 555 667 3785) só fala com destinatários cadastrados. Pra captar de clientes quaisquer, adicionar um número real à WABA. ⚠️ Colocar na Cloud API **desativa o app do WhatsApp** nele (ligações/SMS da linha seguem). Avaliar **número dedicado**. Escopo atual: só receber.
+- [ ] **`GEMINI_API_KEY`** (segredo): `firebase apphosting:secrets:set GEMINI_API_KEY --project crm-benesse`, descomentar o bloco em `apphosting.yaml`, novo push. Habilita o botão "IA" do WhatsApp e (futuro) IA na proposta.
+- [ ] **`WHATSAPP_APP_SECRET`** (segredo, em Configurações Básicas do app Meta → "Chave Secreta"): ativa a validação de assinatura. Mesmo padrão de secret.
+- [ ] **Usuários vendedores:** criar `vendedor1@/vendedor2@benesse.com.br` no console (Authentication → Users).
+- [ ] **Revogar as 2 service-account keys** usadas na migração (console IAM → contas de serviço) — segurança.
+- [ ] **Exportar PDF da proposta/quadro com 1 clique** (hoje é via imprimir do navegador).
+- [ ] (Opcional) **IA pra redigir escopo/e-mail** da proposta (precisa da chave Gemini).
+
+## 🧠 Decisões & pegadinhas (não esquecer)
+- **Projeto antigo:** `gen-lang-client-0070086689` (rótulo **"RH-Benesse"**), banco `ai-studio-55ed0d53-...`. É de onde os dados foram migrados; **não é mais usado**. Repos/apps antigos (`crm-benesse/`, `precificador/` em Downloads) são legado.
+- **Meta WhatsApp:** App ID `1657620641584932` · número de teste `+1 555 667 3785` · Phone Number ID `1159279957269383` · WABA ID `4589712571356514` · Callback `.../api/webhook/whatsapp` · Verify token `benesse_crm_token`.
+- **Modelo de proposta:** veio dos orçamentos reais no Drive (pasta `1P9TMoIyBQeSeM6crPx1nflw88aHCbJSe`). 7 escopos em `src/proposal/escopos.ts`. Regra: **nunca mostrar custos/encargos/margens** ao cliente.
+- **Valor/hora da proposta:** sugerido = valor final ÷ total de horas (editável). ISS no resumo é derivado do valor final (ISS_RATE 9,52%).
+- **Encargo CLT 65%** é premissa — confirmar com o contador.
+- **Gemini só no backend** — nunca reintroduzir `GoogleGenAI` no client nem injetar a chave via Vite `define`.
+- **Banco default** — `getFirestore(app)` sem database id (o app antigo usava database customizado do AI Studio).
 
 ## 🔎 Referência rápida
-- Núcleo de cálculo do precificador: `src/pricing/pricingUtils.ts` (`calcularProposta`, puro)
-- Tela do precificador: `src/components/PrecificadorView.tsx`
-- App principal (telas/forms/lógica): `src/App.tsx`
-- Backend (webhook WhatsApp + IA): `server.ts`
+- Cálculo: `src/pricing/pricingUtils.ts` · Precificador (tela): `src/components/PrecificadorView.tsx`
+- Proposta: `src/components/ProposalModal.tsx` + `src/proposal/proposalTemplate.ts` + `src/proposal/escopos.ts`
+- Quadro: `src/components/ScheduleModal.tsx` + `src/proposal/scheduleTemplate.ts`
+- App/telas: `src/App.tsx` · Backend: `server.ts` (rotas `/api/webhook/whatsapp`, `/api/ai/whatsapp-lead`, `/privacidade`, `/proposta/:id`)
