@@ -2147,6 +2147,8 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  // Orçamento (negociação precificada) escolhido como base da proposta; null = usar o mais recente.
+  const [proposalNeg, setProposalNeg] = useState<Negotiation | null>(null);
   const [editProposal, setEditProposal] = useState<{ docId: string; data: any } | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
@@ -2600,7 +2602,7 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                 >
                   Anexar
                 </Button>
-                <Button size="sm" icon={<FileText size={16} />} onClick={() => setShowProposal(true)}>
+                <Button size="sm" icon={<FileText size={16} />} onClick={() => { setProposalNeg(null); setShowProposal(true); }}>
                   Gerar Proposta
                 </Button>
                 <Button size="sm" variant="secondary" icon={<Calendar size={16} />} onClick={() => setShowSchedule(true)}>
@@ -2716,6 +2718,7 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
             negotiations={negotiations}
             onAddNegotiation={() => setShowAddNegotiation(true)}
             onUseAsBase={onUseAsBase}
+            onGenerateProposal={(neg) => { setProposalNeg(neg); setActiveTab('docs'); setShowProposal(true); }}
           />
         )}
       </div>
@@ -2737,18 +2740,26 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
         </div>
       )}
 
-      {(showProposal || editProposal) && (
-        <ProposalModal
-          lead={lead}
-          pricing={negotiations
-            .filter(n => n.customerId === lead.id && n.pricing)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.pricing}
-          initialData={editProposal?.data}
-          editingDocId={editProposal?.docId}
-          onOpenPricer={() => onOpenPricer(lead.id)}
-          onClose={() => { setShowProposal(false); setEditProposal(null); }}
-        />
-      )}
+      {(showProposal || editProposal) && (() => {
+        // Orçamento base: o escolhido no card, ou o mais recente precificado do cliente.
+        const baseNeg = proposalNeg ?? negotiations
+          .filter(n => n.customerId === lead.id && n.pricing)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null;
+        const pricingLabel = baseNeg?.pricing
+          ? `${baseNeg.title} — ${baseNeg.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · ${format(new Date(baseNeg.date), 'dd/MM/yyyy', { locale: ptBR })}`
+          : undefined;
+        return (
+          <ProposalModal
+            lead={lead}
+            pricing={baseNeg?.pricing}
+            pricingLabel={pricingLabel}
+            initialData={editProposal?.data}
+            editingDocId={editProposal?.docId}
+            onOpenPricer={() => onOpenPricer(lead.id)}
+            onClose={() => { setShowProposal(false); setProposalNeg(null); setEditProposal(null); }}
+          />
+        );
+      })()}
 
       {showSchedule && (
         <ScheduleModal
@@ -3633,7 +3644,8 @@ const NegotiationHistory: React.FC<{
   negotiations: Negotiation[];
   onAddNegotiation: () => void;
   onUseAsBase: (pricing: NegotiationPricing) => void;
-}> = ({ customerId, negotiations, onAddNegotiation, onUseAsBase }) => {
+  onGenerateProposal: (neg: Negotiation) => void;
+}> = ({ customerId, negotiations, onAddNegotiation, onUseAsBase, onGenerateProposal }) => {
   const [showImport, setShowImport] = useState(false);
   const [importData, setImportData] = useState('');
   const [importing, setImporting] = useState(false);
@@ -3752,10 +3764,16 @@ const NegotiationHistory: React.FC<{
               </div>
               <div className="flex items-center gap-2">
                 {neg.pricing && (
-                  <Button variant="ghost" size="sm" icon={<Calculator size={14} />}
-                    onClick={() => onUseAsBase(neg.pricing!)}>
-                    Usar como base
-                  </Button>
+                  <>
+                    <Button variant="ghost" size="sm" icon={<Calculator size={14} />}
+                      onClick={() => onUseAsBase(neg.pricing!)}>
+                      Usar como base
+                    </Button>
+                    <Button variant="outline" size="sm" icon={<FileText size={14} />}
+                      onClick={() => onGenerateProposal(neg)}>
+                      Gerar Proposta
+                    </Button>
+                  </>
                 )}
                 {neg.documents && neg.documents.length > 0 && (
                   <div className="flex -space-x-2">

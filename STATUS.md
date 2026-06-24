@@ -26,6 +26,7 @@ de criada ("Editar" reabre o rascunho).
 
 **Próximos sugeridos (em aberto):**
 - [ ] Testar o ciclo completo num **condomínio** (precificador → proposta com grade → editar → enviar) e dar retorno.
+- [x] **Orçamento → Proposta direto** — 2026-06-24: cada orçamento precificado (aba Negociações) tem botão "Gerar Proposta" que abre o gerador já baseado nele; o gerador mostra "Baseado no orçamento: …" (nome/valor/data). Botão genérico da aba Documentos usa o mais recente, também rotulado. Antes não havia caminho do orçamento p/ proposta e não se sabia qual orçamento entrava.
 - [x] Aulas do precificador também no **Quadro de Horários separado** (ScheduleModal) — 2026-06-24: o modal recebe `pricing` e oferece as modalidades do orçamento como sugestões (datalist) nas células, igual à grade dentro da proposta.
 - [ ] (Opcional) **IA** pra redigir escopo/e-mail (precisa do segredo `GEMINI_API_KEY`).
 - [ ] Criar **usuários vendedores** e, se for usar a IA/WhatsApp em produção, setar os segredos + número real.

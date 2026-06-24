@@ -55,11 +55,12 @@ export interface ProposalDraft {
 
 const AGRADECIMENTO_PADRAO = 'Agradecemos a oportunidade de apresentar esta proposta e reforçamos nosso compromisso com a saúde, o bem-estar e a qualidade de vida das pessoas atendidas. Colocamo-nos à disposição para esclarecer qualquer dúvida e seguir juntos nesta parceria.';
 
-export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer, initialData, editingDocId }: {
+export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, onOpenPricer, initialData, editingDocId }: {
   lead: Lead;
   onClose: () => void;
   onSaved?: () => void;
   pricing?: NegotiationPricing | null;
+  pricingLabel?: string;
   onOpenPricer?: () => void;
   initialData?: ProposalDraft | null;
   editingDocId?: string | null;
@@ -355,6 +356,11 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer, i
                   onClick={() => setItens(prev => [...prev, novaLinha()])}>Linha</Button>
               </div>
             </div>
+            {pricing && !editingDocId && pricingLabel && (
+              <p className="text-[11px] font-semibold text-[#003366] bg-blue-50 border border-blue-100 rounded-lg px-2 py-1.5">
+                Baseado no orçamento: {pricingLabel}
+              </p>
+            )}
             {pricing && (
               <p className="text-[11px] text-teal-700 bg-teal-50 rounded-lg px-2 py-1">
                 Serviços e valor/hora pré-preenchidos pelo precificador (valor sugerido = valor final ÷ horas). Ajuste se quiser.
