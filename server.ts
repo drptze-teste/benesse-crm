@@ -233,8 +233,8 @@ async function startServer() {
     try {
       const snap = await db.collection("documents").doc(req.params.id).get();
       const data = snap.data();
-      if (!snap.exists || !data || data.type !== "Proposal" || !data.content) {
-        return res.status(404).type("html").send("<h1>Proposta não encontrada</h1>");
+      if (!snap.exists || !data || !["Proposal", "Schedule"].includes(data.type) || !data.content) {
+        return res.status(404).type("html").send("<h1>Documento não encontrado</h1>");
       }
       return res.type("html").send(String(data.content));
     } catch (err) {

@@ -102,10 +102,12 @@ Modelo real do usuário (orçamentos no Drive) reproduzido como **template fixo*
   por WhatsApp/E-mail" no histórico do lead. "Ver" abre o link público.
 - **Pendente:** exportar PDF com 1 clique; (opcional) IA p/ redigir o texto.
 
-### 🗓️ Quadro de horários (condomínios) — a construir
-Condomínios costumam ter 4+ profissionais → precisam de uma **grade semanal** (dias × horários × aulas)
-para o cliente ver a distribuição. Plano: builder de grade no app (editável) que vira um documento
-(HTML) anexado ao lead, igual à proposta. Avaliar Canva como alternativa visual.
+### ✅ Quadro de horários (condomínios) — construído no app
+Grade semanal editável (Seg–Sáb × horários × aulas) — `src/proposal/scheduleTemplate.ts` +
+`src/components/ScheduleModal.tsx`. Botão **"Quadro de Horários"** na aba Documentos → editor de grade
+(adiciona horários, preenche a aula por dia) → salva como `documents` type 'Schedule' (HTML).
+Aparece em Documentos (ícone indigo) com Ver (link público) e Enviar (WhatsApp/e-mail) + registro.
+Feito no app (não Canva) por ser editável, linkável e integrado. Dias fixos Seg–Sáb (Dom dá pra add depois).
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores

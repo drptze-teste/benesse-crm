@@ -40,6 +40,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { PrecificadorView } from './components/PrecificadorView';
 import { ProposalModal } from './components/ProposalModal';
+import { ScheduleModal } from './components/ScheduleModal';
 import { 
   DndContext, 
   closestCorners, 
@@ -2146,6 +2147,7 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
@@ -2234,33 +2236,34 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
 
   // --- Envio da proposta (link público) + registro no histórico ---------
   const propostaUrl = (docId: string) => `${window.location.origin}/proposta/${docId}`;
-  const logEnvioProposta = async (canal: string) => {
+  const docLabel = (tipo: string) => tipo === 'Schedule' ? 'Quadro de horários' : 'Proposta';
+  const logEnvioDoc = async (label: string, canal: string) => {
     const email = auth.currentUser?.email;
     if (!email) return;
     try {
       await addDoc(collection(db, 'interactions'), {
         leadId: lead.id,
         type: 'Proposal',
-        summary: `Proposta enviada por ${canal}`,
+        summary: `${label} enviado por ${canal}`,
         outcome: 'Neutral',
         dateTime: new Date().toISOString(),
         createdByUserId: email,
       });
     } catch (err) {
-      console.error('Erro ao registrar envio da proposta:', err);
+      console.error('Erro ao registrar envio:', err);
     }
   };
-  const enviarPropostaWhatsApp = (docId: string) => {
+  const enviarPropostaWhatsApp = (docId: string, tipo = 'Proposal') => {
     const phone = (lead.phone || '').replace(/\D/g, '');
-    const msg = encodeURIComponent(`Olá! Segue a proposta da Benesse Gestão Esportiva: ${propostaUrl(docId)}`);
+    const msg = encodeURIComponent(`Olá! Segue ${docLabel(tipo).toLowerCase()} da Benesse Gestão Esportiva: ${propostaUrl(docId)}`);
     window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
-    logEnvioProposta('WhatsApp');
+    logEnvioDoc(docLabel(tipo), 'WhatsApp');
   };
-  const enviarPropostaEmail = (docId: string) => {
-    const subject = encodeURIComponent('Proposta — Benesse Gestão Esportiva');
-    const body = encodeURIComponent(`Olá,\n\nSegue nossa proposta:\n${propostaUrl(docId)}\n\nQualquer dúvida, estamos à disposição.\nBenesse Gestão Esportiva`);
+  const enviarPropostaEmail = (docId: string, tipo = 'Proposal') => {
+    const subject = encodeURIComponent(`${docLabel(tipo)} — Benesse Gestão Esportiva`);
+    const body = encodeURIComponent(`Olá,\n\nSegue ${docLabel(tipo).toLowerCase()}:\n${propostaUrl(docId)}\n\nQualquer dúvida, estamos à disposição.\nBenesse Gestão Esportiva`);
     window.location.href = `mailto:${lead.email || ''}?subject=${subject}&body=${body}`;
-    logEnvioProposta('E-mail');
+    logEnvioDoc(docLabel(tipo), 'E-mail');
   };
 
   const handleAction = (type: string) => {
@@ -2580,6 +2583,9 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                 <Button size="sm" icon={<FileText size={16} />} onClick={() => setShowProposal(true)}>
                   Gerar Proposta
                 </Button>
+                <Button size="sm" variant="secondary" icon={<Calendar size={16} />} onClick={() => setShowSchedule(true)}>
+                  Quadro de Horários
+                </Button>
               </div>
             </div>
 
@@ -2626,32 +2632,32 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "p-2 rounded-lg",
-                        doc.type === 'Proposal' ? "bg-teal-50 text-teal-600" : doc.type === 'Drive Link' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
+                        doc.type === 'Proposal' ? "bg-teal-50 text-teal-600" : doc.type === 'Schedule' ? "bg-indigo-50 text-indigo-600" : doc.type === 'Drive Link' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
                       )}>
-                        {doc.type === 'Drive Link' ? <Link size={18} /> : <FileText size={18} />}
+                        {doc.type === 'Drive Link' ? <Link size={18} /> : doc.type === 'Schedule' ? <Calendar size={18} /> : <FileText size={18} />}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-900">{doc.title}</p>
                         <p className="text-[10px] text-gray-400 uppercase font-bold">
-                          {doc.type === 'Proposal' ? 'Proposta' : doc.type} • {format(new Date(doc.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {doc.type === 'Proposal' ? 'Proposta' : doc.type === 'Schedule' ? 'Quadro de Horários' : doc.type} • {format(new Date(doc.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {doc.type === 'Proposal' && (
+                      {(doc.type === 'Proposal' || doc.type === 'Schedule') && (
                         <>
                           <Button variant="ghost" size="sm" className="p-2 text-green-600 hover:bg-green-50"
-                            onClick={() => enviarPropostaWhatsApp(doc.id)} aria-label="Enviar por WhatsApp">
+                            onClick={() => enviarPropostaWhatsApp(doc.id, doc.type)} aria-label="Enviar por WhatsApp">
                             <Phone size={16} />
                           </Button>
                           <Button variant="ghost" size="sm" className="p-2 text-blue-600 hover:bg-blue-50"
-                            onClick={() => enviarPropostaEmail(doc.id)} aria-label="Enviar por e-mail">
+                            onClick={() => enviarPropostaEmail(doc.id, doc.type)} aria-label="Enviar por e-mail">
                             <Mail size={16} />
                           </Button>
                         </>
                       )}
                       <Button variant="ghost" size="sm" className="p-2" aria-label="Ver" onClick={() => {
-                        if (doc.type === 'Proposal') {
+                        if (doc.type === 'Proposal' || doc.type === 'Schedule') {
                           window.open(propostaUrl(doc.id), '_blank');
                         } else if (doc.content) {
                           const blob = new Blob([doc.content], { type: 'text/html' });
@@ -2705,6 +2711,10 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
 
       {showProposal && (
         <ProposalModal lead={lead} onClose={() => setShowProposal(false)} />
+      )}
+
+      {showSchedule && (
+        <ScheduleModal lead={lead} onClose={() => setShowSchedule(false)} />
       )}
 
       <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">

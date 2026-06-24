@@ -91,7 +91,7 @@ export interface LeadDocument {
   id: string;
   leadId: string;
   title: string;
-  type: 'PDF' | 'Drive Link' | 'Contract' | 'Proposal';
+  type: 'PDF' | 'Drive Link' | 'Contract' | 'Proposal' | 'Schedule';
   fileUrl: string;
   content?: string;        // HTML da proposta gerada (quando type === 'Proposal')
   versionNote?: string;
