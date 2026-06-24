@@ -9,6 +9,13 @@ import {
 import {
   calcularProposta, matchCusto, parseNum, formatBRL,
 } from '../pricing/pricingUtils';
+import { db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+// A config do precificador (tabela de custos + encargo) é compartilhada e
+// persiste entre máquinas no Firestore (funnel_configs/pricing). O localStorage
+// fica só como cache local rápido.
+const PRICING_CONFIG_DOC = doc(db, 'funnel_configs', 'pricing');
 
 // --- Persistência local da tabela de custos-base ------------------------
 function loadTabela(): Modalidade[] {
@@ -116,6 +123,28 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
   const [encargoCltPct, setEncargoCltPct] = useState<number>(() => initialPricing?.encargoCltPct ?? loadEncargo());
   const [showTabela, setShowTabela] = useState(false);
   const [showSave, setShowSave] = useState(false);
+  const syncTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Carrega a config compartilhada do Firestore ao abrir (1x). Outra máquina
+  // pega a mesma tabela/encargo; o localStorage é só cache.
+  useEffect(() => {
+    let ativo = true;
+    getDoc(PRICING_CONFIG_DOC).then(snap => {
+      if (!ativo || !snap.exists()) return;
+      const d = snap.data() as { tabela?: Modalidade[]; encargoCltPct?: number };
+      if (Array.isArray(d.tabela) && d.tabela.length) { setTabela(d.tabela); saveTabela(d.tabela); }
+      if (typeof d.encargoCltPct === 'number') { setEncargoCltPct(d.encargoCltPct); saveEncargo(d.encargoCltPct); }
+    }).catch(() => { /* offline / sem permissão: usa o cache local */ });
+    return () => { ativo = false; };
+  }, []);
+
+  // Grava a config no Firestore (debounce, pra não escrever a cada tecla).
+  const syncConfig = (partial: { tabela?: Modalidade[]; encargoCltPct?: number }) => {
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      setDoc(PRICING_CONFIG_DOC, partial, { merge: true }).catch(() => { /* mantém só local se falhar */ });
+    }, 800);
+  };
 
   const resultado = useMemo(
     () => calcularProposta(servicos, markupPct, encargoCltPct),
@@ -155,9 +184,9 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
           {showTabela && (
             <TabelaEditor
               tabela={tabela}
-              onChange={(t) => { setTabela(t); saveTabela(t); }}
+              onChange={(t) => { setTabela(t); saveTabela(t); syncConfig({ tabela: t }); }}
               encargoCltPct={encargoCltPct}
-              onEncargoChange={(v) => { setEncargoCltPct(v); saveEncargo(v); }}
+              onEncargoChange={(v) => { setEncargoCltPct(v); saveEncargo(v); syncConfig({ encargoCltPct: v }); }}
               onClose={() => setShowTabela(false)}
             />
           )}
