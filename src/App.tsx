@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PrecificadorView } from './components/PrecificadorView';
+import { ProposalModal } from './components/ProposalModal';
 import { 
   DndContext, 
   closestCorners, 
@@ -2144,6 +2145,7 @@ function AddLeadForm({ onCancel, onSuccess, userId, businessUnit, initialData, f
 function LeadDetailsView({ lead, interactions, documents, negotiations, user, profile, onClose, onLogInteraction, onEdit, onUseAsBase, onOpenPricer, funnelConfigs }: { lead: Lead; interactions: Interaction[]; documents: LeadDocument[]; negotiations: Negotiation[]; user: FirebaseUser | null; profile: UserProfile | null; onClose: () => void; onLogInteraction: () => void; onEdit: () => void; onUseAsBase: (pricing: NegotiationPricing) => void; onOpenPricer: (customerId: string) => void; funnelConfigs: Record<string, string[]> }) {
   const [activeTab, setActiveTab] = useState(lead.type === 'customer' ? 'negotiations' : 'history');
   const [showAddNegotiation, setShowAddNegotiation] = useState(false);
+  const [showProposal, setShowProposal] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
@@ -2536,13 +2538,16 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                 >
                   Link
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   icon={<Plus size={16} />}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   Anexar
+                </Button>
+                <Button size="sm" icon={<FileText size={16} />} onClick={() => setShowProposal(true)}>
+                  Gerar Proposta
                 </Button>
               </div>
             </div>
@@ -2590,18 +2595,25 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "p-2 rounded-lg",
-                        doc.type === 'Drive Link' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
+                        doc.type === 'Proposal' ? "bg-teal-50 text-teal-600" : doc.type === 'Drive Link' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
                       )}>
                         {doc.type === 'Drive Link' ? <Link size={18} /> : <FileText size={18} />}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-900">{doc.title}</p>
                         <p className="text-[10px] text-gray-400 uppercase font-bold">
-                          {doc.type} • {format(new Date(doc.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {doc.type === 'Proposal' ? 'Proposta' : doc.type} • {format(new Date(doc.uploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="p-2" onClick={() => doc.fileUrl !== '#' && window.open(doc.fileUrl, '_blank')}>
+                    <Button variant="ghost" size="sm" className="p-2" onClick={() => {
+                      if (doc.content) {
+                        const blob = new Blob([doc.content], { type: 'text/html' });
+                        window.open(URL.createObjectURL(blob), '_blank');
+                      } else if (doc.fileUrl && doc.fileUrl !== '#') {
+                        window.open(doc.fileUrl, '_blank');
+                      }
+                    }}>
                       <ArrowRight size={16} />
                     </Button>
                   </Card>
@@ -2642,6 +2654,10 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
             />
           </motion.div>
         </div>
+      )}
+
+      {showProposal && (
+        <ProposalModal lead={lead} onClose={() => setShowProposal(false)} />
       )}
 
       <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">

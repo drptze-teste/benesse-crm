@@ -57,6 +57,13 @@ export interface Lead {
   b2cProfile?: B2CProfile;
   lossReason?: string;
   lossCategory?: string;
+  // Dados do contratante para a proposta/contrato
+  cnpj?: string;
+  endereco?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  vigencia?: string;
 }
 
 export interface Interaction {
@@ -86,6 +93,7 @@ export interface LeadDocument {
   title: string;
   type: 'PDF' | 'Drive Link' | 'Contract' | 'Proposal';
   fileUrl: string;
+  content?: string;        // HTML da proposta gerada (quando type === 'Proposal')
   versionNote?: string;
   uploadedByUserId: string;
   uploadedAt: string;

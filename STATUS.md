@@ -80,6 +80,20 @@ lead, enviável por WhatsApp/e-mail (vendedor decide), com **registro no histór
 - **Dependências:** precisa do `GEMINI_API_KEY` (geração por IA). Formato pode ser refinado em cima do
   modelo existente. Falta confirmar com o usuário.
 
+### ✅ v1 construída (sem IA) — 2026-06-23
+Modelo real do usuário (orçamentos no Drive) reproduzido como **template fixo** + campos variáveis:
+- `src/proposal/proposalTemplate.ts` — `buildProposalHtml()` com as partes fixas da Benesse
+  (proponente, representante legal, apresentação, 6 diferenciais, forma de pagamento, validade 60d) e
+  slots variáveis (contratante, escopo, vigência, localidades, tabela de investimento).
+- `src/components/ProposalModal.tsx` — botão **"Gerar Proposta"** na aba Documentos do lead → modal com
+  contratante (pré-preenchido), **escopo editável + alerta "revise antes de enviar"**, vigência,
+  localidades e tabela de investimento (vendedor digita **valor/hora**). Gera o HTML, salva como
+  `documents` (type 'Proposal', `content`=HTML) e grava CNPJ/endereço/cidade/UF/CEP/vigência no lead.
+- Documentos lista as propostas (ícone teal "Proposta") com **"Ver"** (abre o HTML).
+- Campos novos no tipo Lead: cnpj, endereco, cidade, uf, cep, vigencia (capturados/persistidos pelo modal).
+- **Pendente:** enviar por WhatsApp/e-mail + registrar no histórico (fase 2); exportar PDF; refinar
+  escopo por serviço; (opcional) IA p/ gerar o texto.
+
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
       `vendedor1@benesse.com.br` / `vendedor2@benesse.com.br` (admin `drptze@gmail.com` já existe)
