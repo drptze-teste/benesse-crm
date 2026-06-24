@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, Trash2, FileText, AlertTriangle } from 'lucide-react';
+import { X, Plus, Trash2, FileText, AlertTriangle, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button, Badge, cn } from './UI';
@@ -37,11 +37,12 @@ function linhasFromPricing(p: NegotiationPricing): (PropostaItem & { horasDecima
   });
 }
 
-export function ProposalModal({ lead, onClose, onSaved, pricing }: {
+export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }: {
   lead: Lead;
   onClose: () => void;
   onSaved?: () => void;
   pricing?: NegotiationPricing | null;
+  onOpenPricer?: () => void;
 }) {
   const [contratante, setContratante] = useState({
     nome: lead.companyName || lead.name || '',
@@ -158,6 +159,13 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {!pricing && onOpenPricer && (
+            <div className="flex items-center justify-between gap-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+              <p className="text-xs text-yellow-800">Este cliente ainda não tem um orçamento calculado — a tabela de valores está em branco. Calcule no Precificador para puxar os valores.</p>
+              <Button variant="outline" size="sm" icon={<Calculator size={14} />} onClick={onOpenPricer}>Abrir Precificador</Button>
+            </div>
+          )}
+
           {/* Contratante */}
           <section className="space-y-3">
             <h4 className="font-bold text-sm text-gray-900">Contratante</h4>
@@ -272,8 +280,15 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-sm text-gray-900">Investimento</h4>
-              <Button variant="outline" size="sm" icon={<Plus size={14} />}
-                onClick={() => setItens(prev => [...prev, novaLinha()])}>Linha</Button>
+              <div className="flex items-center gap-2">
+                {onOpenPricer && (
+                  <Button variant="ghost" size="sm" icon={<Calculator size={14} />} onClick={onOpenPricer}>
+                    Precificador
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" icon={<Plus size={14} />}
+                  onClick={() => setItens(prev => [...prev, novaLinha()])}>Linha</Button>
+              </div>
             </div>
             {pricing && (
               <p className="text-[11px] text-teal-700 bg-teal-50 rounded-lg px-2 py-1">
