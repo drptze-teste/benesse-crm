@@ -2,6 +2,8 @@
 // Reproduz o modelo real (orçamentos do Drive): partes fixas da Benesse +
 // campos variáveis por cliente/serviço. Função pura, sem IA.
 
+import { renderScheduleTable } from './scheduleTemplate';
+
 export interface PropostaItem {
   item: string;        // Unidade ou nome do serviço (ex.: "Curitiba", "Quick Massage")
   data: string;        // data de execução (ex.: "28/04/2026")
@@ -28,6 +30,8 @@ export interface PropostaInput {
   localidades?: string;    // endereços das unidades (opcional)
   itens: PropostaItem[];
   valorTotalGeral: number;
+  // Quadro de horários (grade semanal) incluído na proposta (opcional).
+  grade?: { dias: string[]; slots: { label: string; cells: string[] }[] };
   // Resumo puxado do precificador (opcional). Sem custos/margens internas.
   resumo?: {
     totalHoras: number;
@@ -103,7 +107,15 @@ export function buildProposalHtml(input: PropostaInput): string {
   .total{font-size:1.15rem;font-weight:bold;color:#003366;}
   ul{margin:8px 0;padding-left:20px;} li{margin:4px 0;}
   .head{color:#6c757d;font-size:.9rem;}
+  .grade table{text-align:center;}
+  .grade thead th{background:#003366;color:#fff;text-align:center;}
+  .grade th.hora,.grade td.hora{background:#f3f6fa;color:#003366;font-weight:bold;text-align:center;white-space:nowrap;}
+  .grade td{text-align:center;}
+  .grade .aula{display:inline-block;background:#FFF3E0;color:#8a5200;border:1px solid #FFD9A8;border-radius:8px;padding:2px 7px;font-weight:600;}
+  .noprint{position:fixed;top:12px;right:12px;background:#003366;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:bold;cursor:pointer;}
+  @media print{.noprint{display:none;}}
 </style></head><body>
+  <button class="noprint" onclick="window.print()">Imprimir / PDF</button>
   <p class="head">${esc(input.dataExtenso)}</p>
   <p>Ao<br/><strong>${esc(c.nome)}</strong></p>
   <p>É com satisfação que apresentamos esta proposta, elaborada com foco em promover saúde, bem-estar e qualidade de vida aos colaboradores de sua empresa. Permanecemos à disposição para esclarecer dúvidas ou fornecer informações adicionais sempre que necessário.</p>
@@ -135,6 +147,8 @@ export function buildProposalHtml(input: PropostaInput): string {
 
   <h1>Escopo</h1>
   <p>${nl2br(input.escopo)}</p>
+
+  ${input.grade && input.grade.slots.length ? `<h1>Quadro de Horários</h1><div class="grade">${renderScheduleTable(input.grade.dias, input.grade.slots)}</div>` : ''}
 
   <h1>Matriz de Responsabilidades</h1>
   <h2>Responsabilidades da Contratante</h2>

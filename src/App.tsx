@@ -2265,6 +2265,25 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
     window.location.href = `mailto:${lead.email || ''}?subject=${subject}&body=${body}`;
     logEnvioDoc(docLabel(tipo), 'E-mail');
   };
+  // Download em Word (.doc HTML, editável) e PDF (via impressão do navegador).
+  const baixarWord = (d: LeadDocument) => {
+    if (!d.content) return;
+    const blob = new Blob(['﻿' + d.content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${(d.title || 'documento').replace(/[\\/:*?"<>|]/g, '-')}.doc`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const baixarPdf = (d: LeadDocument) => {
+    if (!d.content) return;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Permita pop-ups para baixar o PDF.'); return; }
+    w.document.open();
+    w.document.write(d.content);
+    w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch { /* usuário imprime manualmente */ } }, 500);
+  };
 
   const handleAction = (type: string) => {
     if (type === 'whatsapp') {
@@ -2643,9 +2662,13 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap justify-end">
                       {(doc.type === 'Proposal' || doc.type === 'Schedule') && (
                         <>
+                          <Button variant="ghost" size="sm" className="px-2 text-xs font-bold text-gray-600"
+                            onClick={() => baixarWord(doc)}>Word</Button>
+                          <Button variant="ghost" size="sm" className="px-2 text-xs font-bold text-gray-600"
+                            onClick={() => baixarPdf(doc)}>PDF</Button>
                           <Button variant="ghost" size="sm" className="p-2 text-green-600 hover:bg-green-50"
                             onClick={() => enviarPropostaWhatsApp(doc.id, doc.type)} aria-label="Enviar por WhatsApp">
                             <Phone size={16} />

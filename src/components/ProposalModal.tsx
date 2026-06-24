@@ -14,6 +14,9 @@ const ESCOPO_PADRAO =
   'O serviço contempla a realização das atividades com foco na promoção da saúde, bem-estar e qualidade de vida dos colaboradores. As atividades serão conduzidas por profissional qualificado, com exercícios específicos voltados ao ambiente corporativo. Cada atendimento terá duração conforme a dinâmica da empresa, podendo contemplar sessões coletivas e divisão em turmas quando necessário.';
 
 const inputCls = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm';
+const DIAS_GRADE = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+type GradeSlot = { label: string; cells: string[] };
+const novoGradeSlot = (): GradeSlot => ({ label: '', cells: DIAS_GRADE.map(() => '') });
 
 const novaLinha = (): PropostaItem & { horasDecimal: number } => ({
   item: '', data: format(new Date(), 'dd/MM/yyyy'), profissionais: 1,
@@ -61,7 +64,13 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
   };
   const [itens, setItens] = useState<(PropostaItem & { horasDecimal: number })[]>(
     () => pricing?.servicos?.length ? linhasFromPricing(pricing) : [novaLinha()]);
+  const [incluirGrade, setIncluirGrade] = useState(false);
+  const [gradeSlots, setGradeSlots] = useState<GradeSlot[]>([novoGradeSlot(), novoGradeSlot()]);
   const [saving, setSaving] = useState(false);
+
+  const setGradeLabel = (i: number, v: string) => setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, label: v } : s));
+  const setGradeCell = (i: number, d: number, v: string) =>
+    setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, cells: s.cells.map((c, di) => di === d ? v : c) } : s));
 
   // Resumo financeiro puxado do precificador (sem custos/margens internas).
   const resumo = pricing ? (() => {
@@ -95,6 +104,9 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
         responsabilidadesContratada: responsabilidades.trim() || undefined,
         vigencia,
         localidades: localidades.trim() || undefined,
+        grade: incluirGrade
+          ? { dias: DIAS_GRADE, slots: gradeSlots.filter(s => s.label.trim() || s.cells.some(c => c.trim())) }
+          : undefined,
         itens: itensCalc,
         valorTotalGeral,
         resumo,
@@ -202,6 +214,54 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
             <h4 className="font-bold text-sm text-gray-900 pt-1">Localidades de atendimento (opcional)</h4>
             <textarea className={cn(inputCls, 'h-16')} placeholder="Endereços das unidades, se houver mais de uma"
               value={localidades} onChange={e => setLocalidades(e.target.value)} />
+          </section>
+
+          {/* Quadro de horários (opcional, incluído na proposta) */}
+          <section className="space-y-2">
+            <label className="flex items-center gap-2 font-bold text-sm text-gray-900 cursor-pointer">
+              <input type="checkbox" checked={incluirGrade} onChange={e => setIncluirGrade(e.target.checked)} />
+              Incluir quadro de horários (aulas) na proposta
+            </label>
+            {incluirGrade && (
+              <div className="space-y-2">
+                <div className="overflow-x-auto">
+                  <table className="border-collapse w-full min-w-[640px]">
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-200 bg-[#003366] text-white text-xs p-1.5 w-24">Horário</th>
+                        {DIAS_GRADE.map(d => <th key={d} className="border border-gray-200 bg-[#003366] text-white text-xs p-1.5">{d}</th>)}
+                        <th className="w-7"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gradeSlots.map((s, i) => (
+                        <tr key={i}>
+                          <td className="border border-gray-200 p-1">
+                            <input className={cn(inputCls, 'bg-gray-100 text-center font-semibold px-1 py-1')} placeholder="08:00"
+                              value={s.label} onChange={e => setGradeLabel(i, e.target.value)} />
+                          </td>
+                          {DIAS_GRADE.map((_, d) => (
+                            <td key={d} className="border border-gray-200 p-1">
+                              <input className={cn(inputCls, 'px-1 py-1')} placeholder="—"
+                                value={s.cells[d]} onChange={e => setGradeCell(i, d, e.target.value)} />
+                            </td>
+                          ))}
+                          <td className="text-center">
+                            <button className="text-gray-300 hover:text-red-500" aria-label="Remover"
+                              onClick={() => setGradeSlots(p => p.filter((_, idx) => idx !== i))} disabled={gradeSlots.length === 1}>
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => setGradeSlots(p => [...p, novoGradeSlot()])}>
+                  Adicionar horário
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Investimento */}

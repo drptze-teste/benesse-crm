@@ -81,6 +81,11 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 
 ### Quadro de horários (condomínios)
 - Botão **"Quadro de Horários"** na aba Documentos → editor de grade (Seg–Sáb × horários × aulas) → salva como `documents` type `Schedule`. Ver/Enviar igual à proposta. Feito no app (não Canva).
+- **Grade dentro da proposta:** no "Gerar Proposta" há a opção **"Incluir quadro de horários"** → a grade entra como seção da proposta (após o Escopo). Render compartilhado (`renderScheduleTable`).
+
+### Baixar Word + PDF
+- Na aba Documentos, propostas e quadros têm **Word** (baixa `.doc` HTML editável, abre no Word) e **PDF**
+  (abre o documento e dispara a impressão → salvar como PDF). O HTML gerado tem botão "Imprimir / PDF".
 
 ### WhatsApp Business (Cloud API oficial da Meta)
 - Webhook `GET/POST /api/webhook/whatsapp` salva em `whatsapp_inbox`. Validação de assinatura `X-Hub-Signature-256` (ativa quando `WHATSAPP_APP_SECRET` setado).
