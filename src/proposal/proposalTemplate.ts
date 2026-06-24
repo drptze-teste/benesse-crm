@@ -15,6 +15,7 @@ export interface PropostaItem {
 }
 
 export interface PropostaInput {
+  capaUrl?: string;        // imagem de capa escolhida (URL absoluta); se vazio, usa capa HTML
   dataExtenso: string;     // "São Paulo, 24 de abril de 2026"
   contratante: {
     nome: string;
@@ -127,9 +128,13 @@ export function buildProposalHtml(input: PropostaInput): string {
   .capa-serv{color:#6c757d;font-size:1.05rem;}
   .capa-foot{color:#6c757d;font-size:.95rem;}
   .assinatura{margin-top:26px;}
+  .capa-img{page-break-after:always;text-align:center;margin:-32px -28px 0;}
+  .capa-img img{width:100%;height:auto;display:block;}
 </style></head><body>
   <button class="noprint" onclick="window.print()">Imprimir / PDF</button>
 
+  ${input.capaUrl ? `
+  <div class="capa-img"><img src="${esc(input.capaUrl)}" alt="Capa"/></div>` : `
   <div class="capa">
     <div class="capa-brand">BENESSE <span>GESTÃO ESPORTIVA</span></div>
     <div class="capa-mid">
@@ -138,7 +143,7 @@ export function buildProposalHtml(input: PropostaInput): string {
       <div class="capa-serv">Assessoria esportiva, saúde e bem-estar</div>
     </div>
     <div class="capa-foot">${esc(input.dataExtenso)}</div>
-  </div>
+  </div>`}
   <p class="head">${esc(input.dataExtenso)}</p>
   <p>Ao<br/><strong>${esc(c.nome)}</strong></p>
   <p>É com satisfação que apresentamos esta proposta, elaborada com foco em promover saúde, bem-estar e qualidade de vida aos colaboradores de sua empresa. Permanecemos à disposição para esclarecer dúvidas ou fornecer informações adicionais sempre que necessário.</p>

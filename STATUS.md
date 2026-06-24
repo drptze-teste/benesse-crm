@@ -83,6 +83,12 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 - Botão **"Quadro de Horários"** na aba Documentos → editor de grade (Seg–Sáb × horários × aulas) → salva como `documents` type `Schedule`. Ver/Enviar igual à proposta. Feito no app (não Canva).
 - **Grade dentro da proposta:** no "Gerar Proposta" há a opção **"Incluir quadro de horários"** → a grade entra como seção da proposta (após o Escopo). Render compartilhado (`renderScheduleTable`).
 
+### Capas (3 modelos do Canva)
+- 3 capas exportadas do Canva (design `DAGiAVQXrfo` "Proposta Comercial") em `public/capas/capa1-3.png`.
+- No "Gerar Proposta": **seletor de capa com miniaturas** (3 + "Sem capa de imagem"). A capa escolhida
+  entra como 1ª página da proposta (imagem, URL absoluta `${origin}/capas/capaN.png` p/ funcionar no
+  link, blob e Word). Default capa 1.
+
 ### Baixar Word + PDF
 - Na aba Documentos, propostas e quadros têm **Word** (baixa `.doc` HTML editável, abre no Word) e **PDF**
   (abre o documento e dispara a impressão → salvar como PDF). O HTML gerado tem botão "Imprimir / PDF".

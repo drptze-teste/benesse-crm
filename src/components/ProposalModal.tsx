@@ -52,6 +52,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
     uf: lead.uf || '',
     cep: lead.cep || '',
   });
+  const [capaId, setCapaId] = useState(1); // 1..3 ou 0 = sem capa de imagem
   const [presetId, setPresetId] = useState('');
   const [escopo, setEscopo] = useState(ESCOPO_PADRAO);
   const [responsabilidades, setResponsabilidades] = useState('');
@@ -100,6 +101,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
     setSaving(true);
     try {
       const html = buildProposalHtml({
+        capaUrl: capaId ? `${window.location.origin}/capas/capa${capaId}.png` : undefined,
         dataExtenso: 'São Paulo, ' + format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
         contratante,
         escopo,
@@ -165,6 +167,25 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, onOpenPricer }:
               <Button variant="outline" size="sm" icon={<Calculator size={14} />} onClick={onOpenPricer}>Abrir Precificador</Button>
             </div>
           )}
+
+          {/* Capa */}
+          <section className="space-y-2">
+            <h4 className="font-bold text-sm text-gray-900">Capa da proposta</h4>
+            <div className="flex gap-3 flex-wrap">
+              {[1, 2, 3].map(n => (
+                <button key={n} type="button" onClick={() => setCapaId(n)}
+                  className={cn('rounded-lg overflow-hidden border-2 transition-all w-20',
+                    capaId === n ? 'border-[#003366] ring-2 ring-[#003366]/30' : 'border-gray-200 hover:border-gray-300')}>
+                  <img src={`/capas/capa${n}.png`} alt={`Capa ${n}`} className="w-full h-auto block" />
+                </button>
+              ))}
+              <button type="button" onClick={() => setCapaId(0)}
+                className={cn('rounded-lg border-2 w-20 h-28 flex items-center justify-center text-[11px] text-gray-500 text-center px-1',
+                  capaId === 0 ? 'border-[#003366] ring-2 ring-[#003366]/30' : 'border-gray-200 hover:border-gray-300')}>
+                Sem capa de imagem
+              </button>
+            </div>
+          </section>
 
           {/* Contratante */}
           <section className="space-y-3">
