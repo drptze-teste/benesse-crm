@@ -14,12 +14,21 @@ _Última atualização: 2026-06-23_
 - **Login:** admin `drptze@gmail.com` (já existe, via e-mail/senha e Google). Vendedores ainda não criados.
 - **Local:** `npm install` → `npm run dev` (tsx server.ts, porta 3000). `npm run build` = vite (client) + esbuild (server).
 
-## ⏸️ Onde paramos — 2026-06-23
-Tudo no ar. Último grande tema: **proposta de serviços como documento** + **quadro de horários** + **WhatsApp publicado**.
-**Retomar amanhã por aqui (teste do usuário em andamento):**
-- [ ] Testar o fluxo completo de proposta: **Precificador → "Salvar como proposta" (cria a negociação com cálculo) → abrir cliente → Documentos → "Gerar Proposta"** (agora puxa o cálculo) → escolher modelo de escopo → revisar → **Enviar (WhatsApp/e-mail)**. Validar tabela + resumo.
-- [ ] Testar o **Quadro de Horários** (condomínio).
-- [ ] Próximos sugeridos: **Exportar PDF com 1 clique**; (opcional) **IA** pra redigir escopo/e-mail.
+## ⏸️ Onde paramos — 2026-06-23 (ponto de retomada p/ nova sessão)
+Tudo no ar e commitado. App **instalável (PWA)** + **persistência cross-device** confirmada.
+Composição da proposta madura: capa (3 modelos Canva), modelos de escopo (7 reais), puxa o cálculo
+do precificador (valor editável), resumo (horas/ISS/total), **grade com aulas do orçamento**, capa +
+agradecimento, **baixar Word/PDF**, **enviar WhatsApp/e-mail + registro**, e **proposta EDITÁVEL** depois
+de criada ("Editar" reabre o rascunho).
+
+**Como retomar numa nova sessão:** abrir o Claude Code na pasta `benesse-crm` (ou Downloads) e pedir
+"continuar o projeto benesse-crm" → ler este STATUS.md inteiro primeiro.
+
+**Próximos sugeridos (em aberto):**
+- [ ] Testar o ciclo completo num **condomínio** (precificador → proposta com grade → editar → enviar) e dar retorno.
+- [ ] (Opcional) Aulas do precificador também no **Quadro de Horários separado** (ScheduleModal).
+- [ ] (Opcional) **IA** pra redigir escopo/e-mail (precisa do segredo `GEMINI_API_KEY`).
+- [ ] Criar **usuários vendedores** e, se for usar a IA/WhatsApp em produção, setar os segredos + número real.
 
 ---
 
