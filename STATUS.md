@@ -119,6 +119,13 @@ Feito no app (não Canva) por ser editável, linkável e integrado. Dias fixos S
       28 negociações, 3 users, 1 funil), IDs preservados. Script: `scripts/migrate.mjs`.
       ⚠️ Revogar as 2 service-account keys no console depois (IAM > contas de serviço).
 
+## 🔗 Proposta puxa o cálculo do precificador (2026-06-23)
+- O modal "Gerar Proposta" agora **pré-preenche a tabela de investimento** com os serviços do precificador
+  (a partir da negociação mais recente do cliente que tem `pricing`): item=modalidade, dias, horas,
+  e **valor/hora sugerido = valor final ÷ total de horas** (editável).
+- Adiciona um **resumo do investimento**: Total de horas/mês · Subtotal · Impostos (ISS, derivado do
+  valor final) · **Valor Total Mensal** — tanto no modal quanto no HTML gerado. Sem custos/margens internas.
+
 ## 📝 Detalhes a acertar (anote aqui)
 - [x] Botão "Novo Lead" estava escondido para admin → liberado (admin também cadastra lead manual)
 - [x] Origens incluem "Indicação" (já tinha) + "Contato antigo" e "E-mail"; padrão do form = Indicação

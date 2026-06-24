@@ -3,9 +3,10 @@ import { X, Plus, Trash2, FileText, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button, Badge, cn } from './UI';
-import { Lead } from '../types';
+import { Lead, NegotiationPricing } from '../types';
 import { buildProposalHtml, PropostaItem } from '../proposal/proposalTemplate';
 import { ESCOPO_PRESETS } from '../proposal/escopos';
+import { ISS_RATE } from '../pricing/pricingConstants';
 import { db, auth } from '../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -19,10 +20,25 @@ const novaLinha = (): PropostaItem & { horasDecimal: number } => ({
   dias: 1, horasDia: '01:00', horasDecimal: 1, valorHora: 0, valorTotal: 0,
 });
 
-export function ProposalModal({ lead, onClose, onSaved }: {
+// Pré-preenche as linhas a partir do cálculo do precificador.
+function linhasFromPricing(p: NegotiationPricing): (PropostaItem & { horasDecimal: number })[] {
+  const valorHoraSugerido = p.totalHoras > 0 ? Math.round(p.valorFinal / p.totalHoras) : 0;
+  const hoje = format(new Date(), 'dd/MM/yyyy');
+  return (p.servicos || []).map(s => {
+    const dias = s.tipoServico === 'Pontual' ? (s.quantidadeEventos || 1) : s.diasMes;
+    return {
+      item: s.modalidade, data: hoje, profissionais: 1,
+      dias, horasDia: `${s.horasDia}h`, horasDecimal: s.horasDia,
+      valorHora: valorHoraSugerido, valorTotal: 0,
+    };
+  });
+}
+
+export function ProposalModal({ lead, onClose, onSaved, pricing }: {
   lead: Lead;
   onClose: () => void;
   onSaved?: () => void;
+  pricing?: NegotiationPricing | null;
 }) {
   const [contratante, setContratante] = useState({
     nome: lead.companyName || lead.name || '',
@@ -43,8 +59,16 @@ export function ProposalModal({ lead, onClose, onSaved }: {
     const p = ESCOPO_PRESETS.find(x => x.id === id);
     if (p) { setEscopo(p.escopo); setResponsabilidades(p.responsabilidades); if (p.vigencia) setVigencia(p.vigencia); }
   };
-  const [itens, setItens] = useState<(PropostaItem & { horasDecimal: number })[]>([novaLinha()]);
+  const [itens, setItens] = useState<(PropostaItem & { horasDecimal: number })[]>(
+    () => pricing?.servicos?.length ? linhasFromPricing(pricing) : [novaLinha()]);
   const [saving, setSaving] = useState(false);
+
+  // Resumo financeiro puxado do precificador (sem custos/margens internas).
+  const resumo = pricing ? (() => {
+    const total = pricing.valorFinal || 0;
+    const impostos = total * ISS_RATE / (1 + ISS_RATE);
+    return { totalHoras: pricing.totalHoras || 0, subtotal: total - impostos, impostos, total };
+  })() : undefined;
 
   const itensCalc: PropostaItem[] = useMemo(() => itens.map(i => ({
     item: i.item, data: i.data, profissionais: i.profissionais, dias: i.dias,
@@ -73,6 +97,7 @@ export function ProposalModal({ lead, onClose, onSaved }: {
         localidades: localidades.trim() || undefined,
         itens: itensCalc,
         valorTotalGeral,
+        resumo,
       });
 
       // Salva a proposta como documento do lead
@@ -186,6 +211,11 @@ export function ProposalModal({ lead, onClose, onSaved }: {
               <Button variant="outline" size="sm" icon={<Plus size={14} />}
                 onClick={() => setItens(prev => [...prev, novaLinha()])}>Linha</Button>
             </div>
+            {pricing && (
+              <p className="text-[11px] text-teal-700 bg-teal-50 rounded-lg px-2 py-1">
+                Serviços e valor/hora pré-preenchidos pelo precificador (valor sugerido = valor final ÷ horas). Ajuste se quiser.
+              </p>
+            )}
             <div className="space-y-2">
               {itens.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-1 items-center">
@@ -208,10 +238,19 @@ export function ProposalModal({ lead, onClose, onSaved }: {
                 </div>
               ))}
             </div>
-            <div className="text-right text-sm font-bold text-[#003366]">
-              Valor Total: {valorTotalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </div>
-            <p className="text-[10px] text-gray-400">Colunas: Item · Data · Profissionais · Dias · Horas/dia · Valor/hora. O total por linha = valor/hora × dias × horas × profissionais.</p>
+            {resumo ? (
+              <div className="ml-auto w-full sm:w-72 text-sm border border-gray-100 rounded-xl p-3 bg-gray-50 space-y-1">
+                <div className="flex justify-between"><span className="text-gray-500">Total de horas/mês</span><span className="font-semibold">{resumo.totalHoras.toLocaleString('pt-BR')} h</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-semibold">{resumo.subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Impostos (ISS)</span><span className="font-semibold">{resumo.impostos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                <div className="flex justify-between pt-1 border-t border-gray-200"><span className="font-bold text-[#003366]">Valor Total</span><span className="font-black text-[#003366]">{resumo.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+              </div>
+            ) : (
+              <div className="text-right text-sm font-bold text-[#003366]">
+                Valor Total: {valorTotalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </div>
+            )}
+            <p className="text-[10px] text-gray-400">Total por linha = valor/hora × dias × horas × profissionais. O resumo (horas, impostos, total) vem do precificador.</p>
           </section>
         </div>
 

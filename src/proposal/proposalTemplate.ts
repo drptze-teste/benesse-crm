@@ -28,6 +28,13 @@ export interface PropostaInput {
   localidades?: string;    // endereços das unidades (opcional)
   itens: PropostaItem[];
   valorTotalGeral: number;
+  // Resumo puxado do precificador (opcional). Sem custos/margens internas.
+  resumo?: {
+    totalHoras: number;
+    subtotal: number;   // valor dos serviços (sem impostos)
+    impostos: number;   // ISS
+    total: number;      // valor total (subtotal + impostos)
+  };
 }
 
 // ---- Dados FIXOS da Benesse (iguais em todo orçamento) ------------------
@@ -147,8 +154,17 @@ export function buildProposalHtml(input: PropostaInput): string {
   <table class="invest">
     <tr><th>Item</th><th>Data</th><th>Profissionais</th><th>Dias</th><th>Horas/dia</th><th>Valor hora</th><th>Valor Total</th></tr>
     ${itensRows}
-    <tr><td colspan="6" style="text-align:right" class="total">Valor Total</td><td class="total">${brl(input.valorTotalGeral)}</td></tr>
   </table>
+  ${input.resumo ? `
+  <table style="width:auto;margin-left:auto;margin-top:8px;">
+    <tr><td class="k">Total de horas/mês</td><td style="text-align:right">${input.resumo.totalHoras.toLocaleString('pt-BR')} h</td></tr>
+    <tr><td class="k">Subtotal dos serviços</td><td style="text-align:right">${brl(input.resumo.subtotal)}</td></tr>
+    <tr><td class="k">Impostos (ISS)</td><td style="text-align:right">${brl(input.resumo.impostos)}</td></tr>
+    <tr><td class="k total">Valor Total Mensal</td><td class="total" style="text-align:right">${brl(input.resumo.total)}</td></tr>
+  </table>` : `
+  <table style="width:auto;margin-left:auto;margin-top:8px;">
+    <tr><td class="k total">Valor Total</td><td class="total" style="text-align:right">${brl(input.valorTotalGeral)}</td></tr>
+  </table>`}
 
   <h1>Validade da Proposta</h1>
   <p>As condições comerciais apresentadas nesta proposta são válidas por 60 (sessenta) dias a contar desta data.</p>

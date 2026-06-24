@@ -2710,7 +2710,13 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
       )}
 
       {showProposal && (
-        <ProposalModal lead={lead} onClose={() => setShowProposal(false)} />
+        <ProposalModal
+          lead={lead}
+          pricing={negotiations
+            .filter(n => n.customerId === lead.id && n.pricing)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.pricing}
+          onClose={() => setShowProposal(false)}
+        />
       )}
 
       {showSchedule && (
