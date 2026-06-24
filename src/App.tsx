@@ -2751,7 +2751,13 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
       )}
 
       {showSchedule && (
-        <ScheduleModal lead={lead} onClose={() => setShowSchedule(false)} />
+        <ScheduleModal
+          lead={lead}
+          pricing={negotiations
+            .filter(n => n.customerId === lead.id && n.pricing)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.pricing}
+          onClose={() => setShowSchedule(false)}
+        />
       )}
 
       <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">

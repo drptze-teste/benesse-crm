@@ -3,7 +3,7 @@
 > Documento vivo e completo do projeto. Ponto de retomada, decisões, arquitetura,
 > pendências e pegadinhas. **Leia "Onde paramos" e "Pendências" primeiro.**
 
-_Última atualização: 2026-06-23_
+_Última atualização: 2026-06-24_
 
 ---
 
@@ -26,7 +26,7 @@ de criada ("Editar" reabre o rascunho).
 
 **Próximos sugeridos (em aberto):**
 - [ ] Testar o ciclo completo num **condomínio** (precificador → proposta com grade → editar → enviar) e dar retorno.
-- [ ] (Opcional) Aulas do precificador também no **Quadro de Horários separado** (ScheduleModal).
+- [x] Aulas do precificador também no **Quadro de Horários separado** (ScheduleModal) — 2026-06-24: o modal recebe `pricing` e oferece as modalidades do orçamento como sugestões (datalist) nas células, igual à grade dentro da proposta.
 - [ ] (Opcional) **IA** pra redigir escopo/e-mail (precisa do segredo `GEMINI_API_KEY`).
 - [ ] Criar **usuários vendedores** e, se for usar a IA/WhatsApp em produção, setar os segredos + número real.
 

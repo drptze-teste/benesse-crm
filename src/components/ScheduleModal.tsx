@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, CalendarDays } from 'lucide-react';
 import { Button, cn } from './UI';
-import { Lead } from '../types';
+import { Lead, NegotiationPricing } from '../types';
 import { buildScheduleHtml } from '../proposal/scheduleTemplate';
 import { db, auth } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -12,11 +12,14 @@ const inputCls = 'w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-l
 type Slot = { label: string; cells: string[] };
 const novoSlot = (): Slot => ({ label: '', cells: DIAS.map(() => '') });
 
-export function ScheduleModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+export function ScheduleModal({ lead, onClose, pricing }: { lead: Lead; onClose: () => void; pricing?: NegotiationPricing | null }) {
   const [titulo, setTitulo] = useState(`Quadro de Horários — ${lead.companyName || lead.name}`);
   const [subtitulo, setSubtitulo] = useState('');
   const [slots, setSlots] = useState<Slot[]>([novoSlot(), novoSlot(), novoSlot()]);
   const [saving, setSaving] = useState(false);
+
+  // Modalidades do orçamento (precificador) usadas como sugestão nas células.
+  const modalidades = Array.from(new Set((pricing?.servicos || []).map(s => s.modalidade.trim()).filter(Boolean)));
 
   const setLabel = (i: number, v: string) => setSlots(p => p.map((s, idx) => idx === i ? { ...s, label: v } : s));
   const setCell = (i: number, d: number, v: string) =>
@@ -65,6 +68,13 @@ export function ScheduleModal({ lead, onClose }: { lead: Lead; onClose: () => vo
             <input className={inputCls} placeholder="Subtítulo (ex.: 4 profissionais · 2026)" value={subtitulo} onChange={e => setSubtitulo(e.target.value)} />
           </div>
 
+          <datalist id="aulas-precificador-quadro">
+            {modalidades.map(m => <option key={m} value={m} />)}
+          </datalist>
+          {modalidades.length > 0 && (
+            <p className="text-[11px] text-gray-400">Dica: ao clicar numa célula, aparecem as aulas do orçamento ({modalidades.join(', ')}).</p>
+          )}
+
           <div className="overflow-x-auto">
             <table className="border-collapse w-full min-w-[680px]">
               <thead>
@@ -83,7 +93,7 @@ export function ScheduleModal({ lead, onClose }: { lead: Lead; onClose: () => vo
                     </td>
                     {DIAS.map((_, d) => (
                       <td key={d} className="border border-gray-200 p-1">
-                        <input className={inputCls} placeholder="—"
+                        <input className={inputCls} placeholder="—" list="aulas-precificador-quadro"
                           value={s.cells[d]} onChange={e => setCell(i, d, e.target.value)} />
                       </td>
                     ))}
