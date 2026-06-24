@@ -101,6 +101,17 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 ### Migração de dados ✅
 - **119 docs** migrados do projeto antigo → `crm-benesse` (IDs preservados). Script `scripts/migrate.mjs`.
 
+### PWA + persistência cross-device ✅ (2026-06-23)
+- **App instalável** (igual ao financeiro): `public/manifest.json` + `public/sw.js` (network-first) +
+  `public/icons/icon-192.svg` (navy) + registro do SW no `index.html`. No Chrome/Edge: ícone "Instalar"
+  na barra de endereço → vira app no notebook.
+- **Persistência testada:** todos os dados (leads, negociações, propostas/quadros gerados, interações)
+  ficam no Firestore → **cross-device automático** (real-time). Logar em outra máquina mostra tudo.
+- **Config do precificador** (tabela de custos + encargo CLT) movida do localStorage → Firestore
+  (`funnel_configs/pricing`), pra sincronizar entre máquinas. localStorage vira só cache. (O doc é
+  criado na 1ª edição da tabela/encargo após o deploy.)
+- **Firebase p/ uso interno:** nada crítico a mudar. Pendente opcional: criar usuários vendedores; segredos.
+
 ---
 
 ## 📋 Pendências (abertas)
