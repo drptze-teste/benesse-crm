@@ -72,6 +72,9 @@ export function buildProposalHtml(input: PropostaInput): string {
   const c = input.contratante;
   const cidadeUf = [c.cidade, c.uf].filter(Boolean).join(' - ');
 
+  const respContratada = (input.responsabilidadesContratada || RESP_CONTRATADA_PADRAO)
+    .split('\n').map(s => s.trim()).filter(Boolean);
+
   const itensRows = input.itens.map(i => `
     <tr>
       <td>${esc(i.item)}</td><td>${esc(i.data)}</td><td>${i.profissionais}</td>
@@ -130,7 +133,7 @@ export function buildProposalHtml(input: PropostaInput): string {
   <h2>Responsabilidades da Contratante</h2>
   <ul>${RESP_CONTRATANTE_PADRAO.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
   <h2>Responsabilidades da Contratada</h2>
-  <p>${nl2br(input.responsabilidadesContratada || RESP_CONTRATADA_PADRAO)}</p>
+  <ul>${respContratada.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
 
   ${input.localidades ? `<h1>Localidades de Atendimento</h1><p>${nl2br(input.localidades)}</p>` : ''}
 

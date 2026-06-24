@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { Button, Badge, cn } from './UI';
 import { Lead } from '../types';
 import { buildProposalHtml, PropostaItem } from '../proposal/proposalTemplate';
+import { ESCOPO_PRESETS } from '../proposal/escopos';
 import { db, auth } from '../firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -31,9 +32,17 @@ export function ProposalModal({ lead, onClose, onSaved }: {
     uf: lead.uf || '',
     cep: lead.cep || '',
   });
+  const [presetId, setPresetId] = useState('');
   const [escopo, setEscopo] = useState(ESCOPO_PADRAO);
+  const [responsabilidades, setResponsabilidades] = useState('');
   const [vigencia, setVigencia] = useState(lead.vigencia || 'O presente contrato terá vigência correspondente à data de execução do serviço (ação pontual).');
   const [localidades, setLocalidades] = useState('');
+
+  const aplicarPreset = (id: string) => {
+    setPresetId(id);
+    const p = ESCOPO_PRESETS.find(x => x.id === id);
+    if (p) { setEscopo(p.escopo); setResponsabilidades(p.responsabilidades); if (p.vigencia) setVigencia(p.vigencia); }
+  };
   const [itens, setItens] = useState<(PropostaItem & { horasDecimal: number })[]>([novaLinha()]);
   const [saving, setSaving] = useState(false);
 
@@ -59,6 +68,7 @@ export function ProposalModal({ lead, onClose, onSaved }: {
         dataExtenso: 'São Paulo, ' + format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
         contratante,
         escopo,
+        responsabilidadesContratada: responsabilidades.trim() || undefined,
         vigencia,
         localidades: localidades.trim() || undefined,
         itens: itensCalc,
@@ -128,13 +138,36 @@ export function ProposalModal({ lead, onClose, onSaved }: {
             </div>
           </section>
 
+          {/* Modelo / serviço */}
+          <section className="space-y-2">
+            <h4 className="font-bold text-sm text-gray-900">Modelo de serviço</h4>
+            <select className={inputCls} value={presetId} onChange={e => aplicarPreset(e.target.value)}>
+              <option value="">— escolher um modelo pronto —</option>
+              {(['Condomínio', 'Empresa', 'Evento'] as const).map(cat => (
+                <optgroup key={cat} label={cat}>
+                  {ESCOPO_PRESETS.filter(p => p.categoria === cat).map(p => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <p className="text-[10px] text-gray-400">Carrega escopo, responsabilidades e vigência do serviço — todos editáveis abaixo.</p>
+          </section>
+
           {/* Escopo */}
           <section className="space-y-2">
             <h4 className="font-bold text-sm text-gray-900">Escopo do serviço</h4>
             <p className="flex items-center gap-1.5 text-[11px] text-yellow-800 bg-yellow-50 rounded-lg px-2 py-1">
-              <AlertTriangle size={13} /> Revise o escopo (e a vigência) antes de enviar — o texto é genérico e muda conforme o serviço.
+              <AlertTriangle size={13} /> Revise o escopo, as responsabilidades e a vigência antes de enviar.
             </p>
             <textarea className={cn(inputCls, 'h-28')} value={escopo} onChange={e => setEscopo(e.target.value)} />
+          </section>
+
+          {/* Responsabilidades da Contratada */}
+          <section className="space-y-2">
+            <h4 className="font-bold text-sm text-gray-900">Responsabilidades da Contratada</h4>
+            <textarea className={cn(inputCls, 'h-24')} placeholder="Uma responsabilidade por linha (deixe em branco para usar o texto padrão)"
+              value={responsabilidades} onChange={e => setResponsabilidades(e.target.value)} />
           </section>
 
           {/* Vigência + localidades */}

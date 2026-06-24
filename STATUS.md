@@ -91,8 +91,12 @@ Modelo real do usuário (orçamentos no Drive) reproduzido como **template fixo*
   `documents` (type 'Proposal', `content`=HTML) e grava CNPJ/endereço/cidade/UF/CEP/vigência no lead.
 - Documentos lista as propostas (ícone teal "Proposta") com **"Ver"** (abre o HTML).
 - Campos novos no tipo Lead: cnpj, endereco, cidade, uf, cep, vigencia (capturados/persistidos pelo modal).
-- **Pendente:** enviar por WhatsApp/e-mail + registrar no histórico (fase 2); exportar PDF; refinar
-  escopo por serviço; (opcional) IA p/ gerar o texto.
+- **Biblioteca de modelos** (`src/proposal/escopos.ts`): 7 escopos REAIS extraídos dos orçamentos do
+  Drive — Condomínio (Assessoria Esportiva 12m), Empresa (Laboral, Riscos Psicossociais, Saúde no
+  Trabalho), Evento (Quick Massage, Yoga, Laboral+Blitz) + "Em branco". O modal tem um seletor
+  "Modelo de serviço" que carrega escopo + responsabilidades + vigência (todos editáveis).
+- **Pendente:** enviar por WhatsApp/e-mail + registrar no histórico (fase 2); exportar PDF;
+  (opcional) IA p/ redigir o texto.
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores
