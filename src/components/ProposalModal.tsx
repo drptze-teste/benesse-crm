@@ -56,6 +56,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
   const [responsabilidades, setResponsabilidades] = useState('');
   const [vigencia, setVigencia] = useState(lead.vigencia || 'O presente contrato terá vigência correspondente à data de execução do serviço (ação pontual).');
   const [localidades, setLocalidades] = useState('');
+  const [agradecimento, setAgradecimento] = useState('Agradecemos a oportunidade de apresentar esta proposta e reforçamos nosso compromisso com a saúde, o bem-estar e a qualidade de vida das pessoas atendidas. Colocamo-nos à disposição para esclarecer qualquer dúvida e seguir juntos nesta parceria.');
 
   const aplicarPreset = (id: string) => {
     setPresetId(id);
@@ -102,6 +103,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
         contratante,
         escopo,
         responsabilidadesContratada: responsabilidades.trim() || undefined,
+        agradecimento: agradecimento.trim() || undefined,
         vigencia,
         localidades: localidades.trim() || undefined,
         grade: incluirGrade
@@ -214,6 +216,8 @@ export function ProposalModal({ lead, onClose, onSaved, pricing }: {
             <h4 className="font-bold text-sm text-gray-900 pt-1">Localidades de atendimento (opcional)</h4>
             <textarea className={cn(inputCls, 'h-16')} placeholder="Endereços das unidades, se houver mais de uma"
               value={localidades} onChange={e => setLocalidades(e.target.value)} />
+            <h4 className="font-bold text-sm text-gray-900 pt-1">Texto de agradecimento (final)</h4>
+            <textarea className={cn(inputCls, 'h-20')} value={agradecimento} onChange={e => setAgradecimento(e.target.value)} />
           </section>
 
           {/* Quadro de horários (opcional, incluído na proposta) */}

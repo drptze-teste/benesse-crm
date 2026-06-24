@@ -26,6 +26,7 @@ export interface PropostaInput {
   };
   escopo: string;          // texto editável (escopo do serviço)
   responsabilidadesContratada?: string; // opcional, texto editável
+  agradecimento?: string;  // texto de encerramento (editável); usa padrão se vazio
   vigencia: string;        // "ação pontual" / "12 meses" etc.
   localidades?: string;    // endereços das unidades (opcional)
   itens: PropostaItem[];
@@ -53,6 +54,9 @@ const PROPONENTE = {
   email: 'comercial@benessegestaoesportiva.com.br',
 };
 const REPRESENTANTE = 'José Luiz Gomes (Diretor Geral). RG: 24.888.131-0. CPF: 142.944.598-08.';
+
+const AGRADECIMENTO_PADRAO =
+  'Agradecemos a oportunidade de apresentar esta proposta e reforçamos nosso compromisso com a saúde, o bem-estar e a qualidade de vida das pessoas atendidas. Colocamo-nos à disposição para esclarecer qualquer dúvida e seguir juntos nesta parceria.';
 
 const DIFERENCIAIS = [
   'Realizamos todos os serviços com foco na melhoria da qualidade de vida dos colaboradores, promovendo melhor desempenho no trabalho e prevenindo lesões relacionadas a tracionamentos, postura inadequada, içamento de pesos, entre outros.',
@@ -114,8 +118,27 @@ export function buildProposalHtml(input: PropostaInput): string {
   .grade .aula{display:inline-block;background:#FFF3E0;color:#8a5200;border:1px solid #FFD9A8;border-radius:8px;padding:2px 7px;font-weight:600;}
   .noprint{position:fixed;top:12px;right:12px;background:#003366;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:bold;cursor:pointer;}
   @media print{.noprint{display:none;}}
+  .capa{min-height:88vh;display:flex;flex-direction:column;justify-content:space-between;text-align:center;border-top:10px solid #FF9900;border-bottom:10px solid #003366;padding:40px 20px;page-break-after:always;}
+  .capa-brand{color:#003366;font-weight:900;font-size:1.4rem;letter-spacing:1px;}
+  .capa-brand span{color:#FF9900;}
+  .capa-mid{margin:auto 0;}
+  .capa-tag{display:inline-block;background:#003366;color:#fff;border-radius:30px;padding:8px 22px;font-weight:bold;letter-spacing:2px;font-size:.95rem;}
+  .capa-cliente{font-size:2.1rem;color:#1a1a1a;margin:18px 0 6px;border:none;padding:0;}
+  .capa-serv{color:#6c757d;font-size:1.05rem;}
+  .capa-foot{color:#6c757d;font-size:.95rem;}
+  .assinatura{margin-top:26px;}
 </style></head><body>
   <button class="noprint" onclick="window.print()">Imprimir / PDF</button>
+
+  <div class="capa">
+    <div class="capa-brand">BENESSE <span>GESTÃO ESPORTIVA</span></div>
+    <div class="capa-mid">
+      <div class="capa-tag">PROPOSTA COMERCIAL</div>
+      <div class="capa-cliente">${esc(c.nome)}</div>
+      <div class="capa-serv">Assessoria esportiva, saúde e bem-estar</div>
+    </div>
+    <div class="capa-foot">${esc(input.dataExtenso)}</div>
+  </div>
   <p class="head">${esc(input.dataExtenso)}</p>
   <p>Ao<br/><strong>${esc(c.nome)}</strong></p>
   <p>É com satisfação que apresentamos esta proposta, elaborada com foco em promover saúde, bem-estar e qualidade de vida aos colaboradores de sua empresa. Permanecemos à disposição para esclarecer dúvidas ou fornecer informações adicionais sempre que necessário.</p>
@@ -182,5 +205,9 @@ export function buildProposalHtml(input: PropostaInput): string {
 
   <h1>Validade da Proposta</h1>
   <p>As condições comerciais apresentadas nesta proposta são válidas por 60 (sessenta) dias a contar desta data.</p>
+
+  <h1>Agradecimento</h1>
+  <p>${nl2br(input.agradecimento || AGRADECIMENTO_PADRAO)}</p>
+  <p class="assinatura">Atenciosamente,<br/><strong>Benesse Gestão Esportiva</strong><br/>José Luiz Gomes — Diretor Geral</p>
 </body></html>`;
 }
