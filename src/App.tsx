@@ -2232,6 +2232,37 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
 
   const currentStages = funnelConfigs[lead.businessUnit] || (lead.businessUnit === 'Gestão Esportiva' ? B2B_STAGES : B2C_STAGES);
 
+  // --- Envio da proposta (link público) + registro no histórico ---------
+  const propostaUrl = (docId: string) => `${window.location.origin}/proposta/${docId}`;
+  const logEnvioProposta = async (canal: string) => {
+    const email = auth.currentUser?.email;
+    if (!email) return;
+    try {
+      await addDoc(collection(db, 'interactions'), {
+        leadId: lead.id,
+        type: 'Proposal',
+        summary: `Proposta enviada por ${canal}`,
+        outcome: 'Neutral',
+        dateTime: new Date().toISOString(),
+        createdByUserId: email,
+      });
+    } catch (err) {
+      console.error('Erro ao registrar envio da proposta:', err);
+    }
+  };
+  const enviarPropostaWhatsApp = (docId: string) => {
+    const phone = (lead.phone || '').replace(/\D/g, '');
+    const msg = encodeURIComponent(`Olá! Segue a proposta da Benesse Gestão Esportiva: ${propostaUrl(docId)}`);
+    window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
+    logEnvioProposta('WhatsApp');
+  };
+  const enviarPropostaEmail = (docId: string) => {
+    const subject = encodeURIComponent('Proposta — Benesse Gestão Esportiva');
+    const body = encodeURIComponent(`Olá,\n\nSegue nossa proposta:\n${propostaUrl(docId)}\n\nQualquer dúvida, estamos à disposição.\nBenesse Gestão Esportiva`);
+    window.location.href = `mailto:${lead.email || ''}?subject=${subject}&body=${body}`;
+    logEnvioProposta('E-mail');
+  };
+
   const handleAction = (type: string) => {
     if (type === 'whatsapp') {
       const phone = lead.phone?.replace(/\D/g, '');
@@ -2606,16 +2637,32 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="p-2" onClick={() => {
-                      if (doc.content) {
-                        const blob = new Blob([doc.content], { type: 'text/html' });
-                        window.open(URL.createObjectURL(blob), '_blank');
-                      } else if (doc.fileUrl && doc.fileUrl !== '#') {
-                        window.open(doc.fileUrl, '_blank');
-                      }
-                    }}>
-                      <ArrowRight size={16} />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {doc.type === 'Proposal' && (
+                        <>
+                          <Button variant="ghost" size="sm" className="p-2 text-green-600 hover:bg-green-50"
+                            onClick={() => enviarPropostaWhatsApp(doc.id)} aria-label="Enviar por WhatsApp">
+                            <Phone size={16} />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="p-2 text-blue-600 hover:bg-blue-50"
+                            onClick={() => enviarPropostaEmail(doc.id)} aria-label="Enviar por e-mail">
+                            <Mail size={16} />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="sm" className="p-2" aria-label="Ver" onClick={() => {
+                        if (doc.type === 'Proposal') {
+                          window.open(propostaUrl(doc.id), '_blank');
+                        } else if (doc.content) {
+                          const blob = new Blob([doc.content], { type: 'text/html' });
+                          window.open(URL.createObjectURL(blob), '_blank');
+                        } else if (doc.fileUrl && doc.fileUrl !== '#') {
+                          window.open(doc.fileUrl, '_blank');
+                        }
+                      }}>
+                        <ArrowRight size={16} />
+                      </Button>
+                    </div>
                   </Card>
                 ))}
               </div>

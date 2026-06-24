@@ -95,8 +95,17 @@ Modelo real do usuário (orçamentos no Drive) reproduzido como **template fixo*
   Drive — Condomínio (Assessoria Esportiva 12m), Empresa (Laboral, Riscos Psicossociais, Saúde no
   Trabalho), Evento (Quick Massage, Yoga, Laboral+Blitz) + "Em branco". O modal tem um seletor
   "Modelo de serviço" que carrega escopo + responsabilidades + vigência (todos editáveis).
-- **Pendente:** enviar por WhatsApp/e-mail + registrar no histórico (fase 2); exportar PDF;
-  (opcional) IA p/ redigir o texto.
+### ✅ Fase 2 — envio + registro (2026-06-23)
+- Backend serve cada proposta por **link público**: `GET /proposta/:id` (id não-adivinhável do Firestore).
+- Na aba Documentos, cada proposta tem **WhatsApp** (abre wa.me do cliente com o link) e **E-mail**
+  (abre o e-mail com assunto/corpo + link). Ao enviar, registra uma **interação** "Proposta enviada
+  por WhatsApp/E-mail" no histórico do lead. "Ver" abre o link público.
+- **Pendente:** exportar PDF com 1 clique; (opcional) IA p/ redigir o texto.
+
+### 🗓️ Quadro de horários (condomínios) — a construir
+Condomínios costumam ter 4+ profissionais → precisam de uma **grade semanal** (dias × horários × aulas)
+para o cliente ver a distribuição. Plano: builder de grade no app (editável) que vira um documento
+(HTML) anexado ao lead, igual à proposta. Avaliar Canva como alternativa visual.
 
 ## 📋 Pendências
 - [ ] **Usuários de login**: criar no console (Authentication → Users) os vendedores

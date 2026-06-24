@@ -227,6 +227,22 @@ async function startServer() {
 </html>`);
   });
 
+  // Serve uma proposta gerada (documento type 'Proposal') por link público.
+  // O id é gerado pelo Firestore (não-adivinhável) — link "qualquer um com o link".
+  app.get("/proposta/:id", async (req, res) => {
+    try {
+      const snap = await db.collection("documents").doc(req.params.id).get();
+      const data = snap.data();
+      if (!snap.exists || !data || data.type !== "Proposal" || !data.content) {
+        return res.status(404).type("html").send("<h1>Proposta não encontrada</h1>");
+      }
+      return res.type("html").send(String(data.content));
+    } catch (err) {
+      console.error("Erro ao servir proposta:", err);
+      return res.status(500).type("html").send("<h1>Erro ao carregar a proposta</h1>");
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
