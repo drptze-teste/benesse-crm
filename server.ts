@@ -106,6 +106,53 @@ async function startServer() {
     }
   });
 
+  // IA: redige o ESCOPO ou o E-MAIL de apresentação de uma proposta.
+  // Nunca inclui preços/custos/margens (regra do modelo de proposta).
+  app.post("/api/ai/proposal-text", async (req, res) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
+    }
+    const { tipo, contratante, itens, categoria } = req.body || {};
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const lista = Array.isArray(itens) ? itens.filter(Boolean).join(", ") : "";
+      const promptEscopo = `Você redige propostas comerciais da Benesse Gestão Esportiva (assessoria de saúde, bem-estar e atividade física para empresas e condomínios).
+Escreva o ESCOPO do serviço para o contratante "${contratante || ''}"${categoria ? ` (categoria: ${categoria})` : ''}.
+Serviços/modalidades: ${lista || 'atividades de bem-estar'}.
+Tom profissional e claro, 1 a 2 parágrafos, foco na saúde e no bem-estar dos participantes.
+NÃO mencione preços, custos, encargos, salários ou margens. Responda APENAS com o texto do escopo, sem título.`;
+      const promptEmail = `Escreva um e-mail curto e cordial de APRESENTAÇÃO da proposta da Benesse Gestão Esportiva para "${contratante || ''}".
+Serviços: ${lista || 'atividades de bem-estar'}. Tom profissional e caloroso, 1 parágrafo, convidando a conversar.
+NÃO inclua preços. Responda APENAS com o corpo do e-mail (sem assunto e sem assinatura).`;
+      const prompt = tipo === 'email' ? promptEmail : promptEscopo;
+      const response = await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt });
+      return res.json({ texto: (response.text || "").trim() });
+    } catch (err) {
+      console.error("Erro IA proposal-text:", err);
+      return res.status(500).json({ error: "Falha ao gerar texto com IA." });
+    }
+  });
+
+  // IA: redige uma mensagem de abordagem para "possível recompra" (sazonalidade).
+  app.post("/api/ai/recompra-text", async (req, res) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
+    }
+    const { customerName, item, quando, basis } = req.body || {};
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const prompt = `Você é vendedor da Benesse Gestão Esportiva. Escreva uma mensagem curta e cordial de WhatsApp para o cliente "${customerName || ''}", retomando o contato porque ele costuma contratar "${item || 'nossos serviços'}" nesta época do ano (${quando || ''}; histórico: ${basis || ''}).
+Tom amigável e consultivo, 2 a 4 linhas, oferecendo renovar ou agendar uma conversa. NÃO invente preços. Responda APENAS com a mensagem.`;
+      const response = await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt });
+      return res.json({ texto: (response.text || "").trim() });
+    } catch (err) {
+      console.error("Erro IA recompra-text:", err);
+      return res.status(500).json({ error: "Falha ao gerar mensagem com IA." });
+    }
+  });
+
   // WhatsApp Webhook Verification
   app.get("/api/webhook/whatsapp", (req, res) => {
     const mode = req.query["hub.mode"];

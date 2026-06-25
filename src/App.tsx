@@ -35,7 +35,9 @@ import {
   ArrowDown,
   Link,
   FileUp,
-  Calculator
+  Calculator,
+  Sparkles,
+  Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PrecificadorView } from './components/PrecificadorView';
@@ -477,6 +479,18 @@ const WhatsAppInbox = ({ messages, onProcess, onCreateLead, onIgnore }: { messag
 
 // --- Main App ---
 
+// Data de corte dos gráficos do Dashboard: contam só leads criados a partir
+// daqui (base "limpa" do novo CRM). Não apaga nada — apenas filtra a visão.
+const CHART_RESET_DATE = new Date('2026-06-25T00:00:00');
+function leadCreatedAtDate(l: Lead): Date | null {
+  const v = (l as { createdAt?: unknown }).createdAt;
+  if (!v) return null;
+  if (typeof (v as { toDate?: () => Date }).toDate === 'function') {
+    const d = (v as { toDate: () => Date }).toDate(); return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(v as string); return isNaN(d.getTime()) ? null : d;
+}
+
 // "Possível recompra" — formata quando a próxima recompra é esperada.
 function recompraQuando(a: RecompraAlert): string {
   const mesAno = new Date(a.expectedDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -485,18 +499,57 @@ function recompraQuando(a: RecompraAlert): string {
 }
 
 const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ alert, onOpen }) => {
+  const [msgIA, setMsgIA] = useState('');
+  const [loadingIA, setLoadingIA] = useState(false);
+
+  // IA (backend): redige a mensagem de abordagem. 503 enquanto a chave não existe.
+  const gerarMsg = async () => {
+    setLoadingIA(true);
+    try {
+      const resp = await fetch('/api/ai/recompra-text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: alert.customerName, item: alert.item,
+          quando: recompraQuando(alert), basis: alert.basis,
+        }),
+      });
+      if (!resp.ok) {
+        const { error } = await resp.json().catch(() => ({ error: '' }));
+        window.alert(error || 'IA indisponível. Verifique se a chave foi configurada no servidor.');
+        return;
+      }
+      const { texto } = await resp.json();
+      if (texto) setMsgIA(texto); else window.alert('A IA não retornou texto.');
+    } catch {
+      window.alert('Falha ao chamar a IA.');
+    } finally {
+      setLoadingIA(false);
+    }
+  };
+
   return (
-    <div className="flex items-center justify-between gap-3 bg-white rounded-xl border border-amber-100 px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-bold text-gray-900 truncate">
-          {alert.customerName} <span className="font-normal text-gray-300">·</span> {alert.item}
-        </p>
-        <p className="text-[11px] text-gray-500 truncate">{recompraQuando(alert)} — {alert.basis}</p>
+    <div className="bg-white rounded-xl border border-amber-100 px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-gray-900 truncate">
+            {alert.customerName} <span className="font-normal text-gray-300">·</span> {alert.item}
+          </p>
+          <p className="text-[11px] text-gray-500 truncate">{recompraQuando(alert)} — {alert.basis}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant={alert.confidence === 'alta' ? 'success' : 'neutral'}>{alert.confidence}</Badge>
+          <Button variant="ghost" size="sm" icon={<Sparkles size={13} />} loading={loadingIA} onClick={gerarMsg}>IA</Button>
+          <Button variant="outline" size="sm" onClick={onOpen}>Ver</Button>
+        </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Badge variant={alert.confidence === 'alta' ? 'success' : 'neutral'}>{alert.confidence}</Badge>
-        <Button variant="outline" size="sm" onClick={onOpen}>Ver</Button>
-      </div>
+      {msgIA && (
+        <div className="mt-2 space-y-1">
+          <textarea className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg p-2 h-20"
+            value={msgIA} onChange={e => setMsgIA(e.target.value)} />
+          <Button variant="ghost" size="sm" icon={<Copy size={13} />}
+            onClick={() => navigator.clipboard?.writeText(msgIA)}>Copiar</Button>
+        </div>
+      )}
     </div>
   );
 };
@@ -587,6 +640,9 @@ export default function App() {
     }
     return matchesSearch;
   });
+
+  // Gráficos do Dashboard: só leads do novo CRM (criados a partir da data de corte).
+  const chartLeads = filteredLeads.filter(l => { const d = leadCreatedAtDate(l); return d ? d >= CHART_RESET_DATE : false; });
 
   const filteredTasks = tasks.filter(t => {
     const title = t.title || '';
@@ -1059,7 +1115,7 @@ export default function App() {
                           <BarChart data={
                             SOURCES.map(source => ({
                               name: source,
-                              value: filteredLeads.filter(l => l.source === source).length
+                              value: chartLeads.filter(l => l.source === source).length
                             })).filter(d => d.value > 0).sort((a, b) => b.value - a.value)
                           }>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -1086,11 +1142,11 @@ export default function App() {
                           <PieChart>
                             <Pie
                               data={[
-                                { name: 'Condomínio', value: filteredLeads.filter(l => l.b2bProfile?.segment === 'Condomínio').length },
-                                { name: 'Empresa', value: filteredLeads.filter(l => l.b2bProfile?.segment === 'Empresa').length },
-                                { name: 'Clube', value: filteredLeads.filter(l => l.b2bProfile?.segment === 'Clube').length },
-                                { name: 'Público', value: filteredLeads.filter(l => l.b2bProfile?.segment === 'Público').length },
-                                { name: 'Pilates (B2C)', value: filteredLeads.filter(l => l.businessUnit === 'Studio de Pilates').length },
+                                { name: 'Condomínio', value: chartLeads.filter(l => l.b2bProfile?.segment === 'Condomínio').length },
+                                { name: 'Empresa', value: chartLeads.filter(l => l.b2bProfile?.segment === 'Empresa').length },
+                                { name: 'Clube', value: chartLeads.filter(l => l.b2bProfile?.segment === 'Clube').length },
+                                { name: 'Público', value: chartLeads.filter(l => l.b2bProfile?.segment === 'Público').length },
+                                { name: 'Pilates (B2C)', value: chartLeads.filter(l => l.businessUnit === 'Studio de Pilates').length },
                               ].filter(d => d.value > 0)}
                               cx="50%"
                               cy="50%"

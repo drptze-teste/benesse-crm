@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, Trash2, FileText, AlertTriangle, Calculator } from 'lucide-react';
+import { X, Plus, Trash2, FileText, AlertTriangle, Calculator, Sparkles, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button, Badge, cn } from './UI';
@@ -94,6 +94,36 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
   const [gradeSlots, setGradeSlots] = useState<GradeSlot[]>(() => initialData?.gradeSlots?.length ? initialData.gradeSlots : [novoGradeSlot(), novoGradeSlot()]);
   const [gradeObs, setGradeObs] = useState(() => initialData?.gradeObs ?? '');
   const [saving, setSaving] = useState(false);
+  const [iaLoading, setIaLoading] = useState<'escopo' | 'email' | null>(null);
+  const [emailIA, setEmailIA] = useState('');
+
+  // IA (backend): redige o escopo ou o e-mail de apresentação. 503 enquanto a chave não existe.
+  const gerarComIA = async (tipo: 'escopo' | 'email') => {
+    setIaLoading(tipo);
+    try {
+      const resp = await fetch('/api/ai/proposal-text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo,
+          contratante: contratante.nome,
+          itens: itens.map(i => i.item).filter(Boolean),
+          categoria: ESCOPO_PRESETS.find(p => p.id === presetId)?.categoria,
+        }),
+      });
+      if (!resp.ok) {
+        const { error } = await resp.json().catch(() => ({ error: '' }));
+        alert(error || 'IA indisponível. Verifique se a chave foi configurada no servidor.');
+        return;
+      }
+      const { texto } = await resp.json();
+      if (!texto) { alert('A IA não retornou texto. Tente novamente.'); return; }
+      if (tipo === 'escopo') setEscopo(texto); else setEmailIA(texto);
+    } catch {
+      alert('Falha ao chamar a IA.');
+    } finally {
+      setIaLoading(null);
+    }
+  };
 
   const setGradeLabel = (i: number, v: string) => setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, label: v } : s));
   const setGradeCell = (i: number, d: number, v: string) =>
@@ -265,11 +295,39 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
 
           {/* Escopo */}
           <section className="space-y-2">
-            <h4 className="font-bold text-sm text-gray-900">Escopo do serviço</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-gray-900">Escopo do serviço</h4>
+              <Button variant="outline" size="sm" icon={<Sparkles size={14} />}
+                loading={iaLoading === 'escopo'} onClick={() => gerarComIA('escopo')}>
+                Escrever com IA
+              </Button>
+            </div>
             <p className="flex items-center gap-1.5 text-[11px] text-yellow-800 bg-yellow-50 rounded-lg px-2 py-1">
               <AlertTriangle size={13} /> Revise o escopo, as responsabilidades e a vigência antes de enviar.
             </p>
             <textarea className={cn(inputCls, 'h-28')} value={escopo} onChange={e => setEscopo(e.target.value)} />
+          </section>
+
+          {/* E-mail de apresentação (IA) — texto auxiliar pra copiar; não entra no documento */}
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-gray-900">E-mail de apresentação (IA)</h4>
+              <Button variant="outline" size="sm" icon={<Sparkles size={14} />}
+                loading={iaLoading === 'email'} onClick={() => gerarComIA('email')}>
+                Gerar e-mail
+              </Button>
+            </div>
+            {emailIA ? (
+              <div className="space-y-1">
+                <textarea className={cn(inputCls, 'h-28')} value={emailIA} onChange={e => setEmailIA(e.target.value)} />
+                <Button variant="ghost" size="sm" icon={<Copy size={13} />}
+                  onClick={() => navigator.clipboard?.writeText(emailIA)}>
+                  Copiar e-mail
+                </Button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-400">Gera um texto de e-mail pronto pra copiar e enviar ao cliente (não entra no documento).</p>
+            )}
           </section>
 
           {/* Responsabilidades da Contratada */}
