@@ -56,7 +56,7 @@ async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", build: "ia-key-v3" });
   });
 
   // IA: extrai dados de lead a partir de uma mensagem de WhatsApp.
