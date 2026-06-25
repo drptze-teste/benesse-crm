@@ -319,7 +319,7 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
                   <span>Markup</span>
                   <div className="flex items-center gap-1">
                     <DecimalInput value={markupPct} maxDecimals={1}
-                      onChange={n => setMarkupPct(n)}
+                      onChange={n => setMarkupPct(Math.min(99, Math.max(1, n)))}
                       className="w-16 py-1 text-right font-bold text-[#003366]" />
                     <span className="font-bold text-[#003366]">%</span>
                   </div>

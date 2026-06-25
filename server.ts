@@ -98,7 +98,17 @@ async function startServer() {
         config: { responseMimeType: "application/json" },
       });
       const raw = (response.text || "{}").replace(/```json|```/g, "").trim();
-      const data = JSON.parse(raw);
+      let data: any;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        return res.status(502).json({ error: "A IA retornou um formato inesperado. Tente novamente." });
+      }
+      if (data && typeof data === "object") {
+        data.estimatedValue = Number(data.estimatedValue) || 0;
+        if (!["Low", "Medium", "High"].includes(data.priority)) data.priority = "Medium";
+        if (!["Cold", "Warm", "Hot"].includes(data.temperature)) data.temperature = "Warm";
+      }
       return res.json(data);
     } catch (err) {
       console.error("Erro IA whatsapp-lead:", err);
@@ -114,6 +124,9 @@ async function startServer() {
       return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
     }
     const { tipo, contratante, itens, categoria } = req.body || {};
+    if (!contratante && !(Array.isArray(itens) && itens.length)) {
+      return res.status(400).json({ error: "Dados insuficientes para gerar o texto." });
+    }
     try {
       const ai = new GoogleGenAI({ apiKey });
       const lista = Array.isArray(itens) ? itens.filter(Boolean).join(", ") : "";
@@ -141,6 +154,9 @@ NÃO inclua preços. Responda APENAS com o corpo do e-mail (sem assunto e sem as
       return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
     }
     const { customerName, item, quando, basis } = req.body || {};
+    if (!customerName && !item) {
+      return res.status(400).json({ error: "Dados insuficientes para gerar a mensagem." });
+    }
     try {
       const ai = new GoogleGenAI({ apiKey });
       const prompt = `Você é vendedor da Benesse Gestão Esportiva. Escreva uma mensagem curta e cordial de WhatsApp para o cliente "${customerName || ''}", retomando o contato porque ele costuma contratar "${item || 'nossos serviços'}" nesta época do ano (${quando || ''}; histórico: ${basis || ''}).

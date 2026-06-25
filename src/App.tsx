@@ -491,6 +491,26 @@ function leadCreatedAtDate(l: Lead): Date | null {
   const d = new Date(v as string); return isNaN(d.getTime()) ? null : d;
 }
 
+// Parser tolerante de datas de import (planilha): aceita Date, serial do Excel,
+// 'dd/mm/aaaa' (BR), 'dd-mm-aaaa' e ISO. Retorna ISO ou null (nunca lança).
+function parseDataImport(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString();
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000)); // serial do Excel
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const s = String(v).trim();
+  const br = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (br) {
+    const ano = br[3].length === 2 ? Number('20' + br[3]) : Number(br[3]);
+    const d = new Date(ano, Number(br[2]) - 1, Number(br[1]));
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 // "Possível recompra" — formata quando a próxima recompra é esperada.
 function recompraQuando(a: RecompraAlert): string {
   const mesAno = new Date(a.expectedDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -508,6 +528,7 @@ const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ a
     try {
       const resp = await fetch('/api/ai/recompra-text', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           customerName: alert.customerName, item: alert.item,
           quando: recompraQuando(alert), basis: alert.basis,
@@ -545,6 +566,7 @@ const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ a
       {msgIA && (
         <div className="mt-2 space-y-1">
           <textarea className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg p-2 h-20"
+            aria-label="Mensagem de abordagem gerada pela IA"
             value={msgIA} onChange={e => setMsgIA(e.target.value)} />
           <Button variant="ghost" size="sm" icon={<Copy size={13} />}
             onClick={() => navigator.clipboard?.writeText(msgIA)}>Copiar</Button>
@@ -557,14 +579,20 @@ const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ a
 const RecompraPopup: React.FC<{
   alerts: RecompraAlert[]; onClose: () => void; onOpenCustomer: (id: string) => void;
 }> = ({ alerts, onClose, onOpenCustomer }) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col"
+        role="dialog" aria-modal="true" aria-label="Possível recompra" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-bold text-lg flex items-center gap-2 text-[#003366]">
             <Clock size={20} className="text-amber-500" /> Possível recompra ({alerts.length})
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+          <button onClick={onClose} aria-label="Fechar" className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
         </div>
         <div className="flex-1 overflow-auto p-5 space-y-2">
           <p className="text-xs text-gray-500 mb-2">Clientes que costumam recontratar nos próximos 60 dias, com base nos contratos fechados. Boa hora para um contato proativo.</p>
@@ -860,6 +888,7 @@ export default function App() {
       const resp = await fetch('/api/ai/whatsapp-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           text: msg.text,
           name: msg.name,
@@ -1049,17 +1078,15 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard 
                     title="Total de Leads" 
-                    value={filteredLeads.length} 
-                    icon={Target} 
-                    trend="+12% este mês" 
+                    value={filteredLeads.length}
+                    icon={Target}
                     color="blue"
                     info="Número total de leads ativos no funil (filtrado)"
                   />
                   <StatCard 
                     title="Valor em Pipeline" 
                     value={`R$ ${filteredLeads.reduce((acc, l) => acc + (l.estimatedValue || 0), 0).toLocaleString()}`} 
-                    icon={DollarSign} 
-                    trend="+5% vs meta" 
+                    icon={DollarSign}
                     color="teal"
                     info="Soma do valor estimado de todos os leads qualificados (filtrado)"
                   />
@@ -1073,8 +1100,7 @@ export default function App() {
                   <StatCard 
                     title="Taxa de Conversão" 
                     value={`${leads.length > 0 ? Math.round((leads.filter(l => l.currentStage === 'Fechado' || l.currentStage === 'Matriculado').length / leads.length) * 100) : 0}%`} 
-                    icon={TrendingUp} 
-                    trend="+2% vs média" 
+                    icon={TrendingUp}
                     color="blue"
                     info="Percentual de leads que se tornam clientes"
                   />
@@ -1111,6 +1137,12 @@ export default function App() {
                         <Tooltip content="Principais canais de entrada de novos clientes" className="text-gray-300" />
                       </div>
                       <div className="h-64">
+                        {chartLeads.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 text-sm px-4">
+                            <p className="font-medium">Sem dados ainda</p>
+                            <p className="text-xs mt-1">Os gráficos contam leads cadastrados a partir de 25/06/2026.</p>
+                          </div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={
                             SOURCES.map(source => ({
@@ -1127,6 +1159,7 @@ export default function App() {
                             <Bar dataKey="value" fill="#003366" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
+                        )}
                       </div>
                     </Card>
 
@@ -1138,6 +1171,12 @@ export default function App() {
                         <Tooltip content="Distribuição por tipo de cliente (B2B/B2C)" className="text-gray-300" />
                       </div>
                       <div className="h-64">
+                        {chartLeads.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 text-sm px-4">
+                            <p className="font-medium">Sem dados ainda</p>
+                            <p className="text-xs mt-1">Os segmentos aparecem conforme novos leads forem cadastrados.</p>
+                          </div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -1165,6 +1204,7 @@ export default function App() {
                             <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                           </PieChart>
                         </ResponsiveContainer>
+                        )}
                       </div>
                     </Card>
                   </div>
@@ -1182,6 +1222,9 @@ export default function App() {
                       </div>
                     </div>
                     <div className="space-y-4">
+                      {interactions.filter(i => adminSelectedVendor === 'all' ? true : i.createdByUserId === adminSelectedVendor).length === 0 && (
+                        <p className="text-sm text-gray-400 py-6 text-center">Nenhuma interação registrada ainda.</p>
+                      )}
                       {interactions
                         .filter(i => adminSelectedVendor === 'all' ? true : i.createdByUserId === adminSelectedVendor)
                         .slice(0, 5).map(interaction => (
@@ -3584,7 +3627,7 @@ const CustomersView: React.FC<{
       reader.onload = async (evt) => {
         try {
           const data = evt.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const json = XLSX.utils.sheet_to_json(worksheet) as any[];
@@ -3681,7 +3724,7 @@ const CustomersView: React.FC<{
                 customerId: customerId,
                 title: negTitle ? String(negTitle) : 'Negociação Importada',
                 value: Number(String(negValue).replace(/[^\d.-]/g, '')) || 0,
-                date: negDate ? new Date(negDate).toISOString() : new Date().toISOString(),
+                date: parseDataImport(negDate) ?? new Date().toISOString(),
                 status: (['Won', 'Lost', 'Ongoing'].includes(String(negStatus))) ? negStatus : 'Won',
                 description: negDesc ? String(negDesc) : 'Importado via planilha',
                 createdAt: new Date().toISOString(),

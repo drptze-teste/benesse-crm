@@ -136,6 +136,31 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 
 ---
 
+## 🔍 Deep review (2026-06-25) — multi-agente, 29 achados confirmados (8 alta / 11 média / 7 baixa)
+
+**Corrigido e publicado nesta rodada (correções seguras):**
+- [x] #7 Reabrir proposta injetava resumo financeiro de OUTRO orçamento (`null ?? pricing`) → em modo edição usa só o resumo salvo. **(impacto financeiro no cliente)**
+- [x] #6 StatCards mostravam trends percentuais falsos (hardcoded) → removidos.
+- [x] #5 Gráficos do Dashboard vazios sem aviso → empty state ("contam a partir de 25/06/2026").
+- [x] #4 Import de planilha: datas BR (dd/mm/aaaa) quebravam/trocavam o mês (afetava recompra) → parser robusto + `cellDates`.
+- [x] #15 Chamadas de IA sem timeout → `AbortSignal.timeout(30s)` nos 3 fetches.
+- [x] #16/#25 Rotas de IA: `JSON.parse` isolado (502) + validação de entrada (400) + coerção de enums.
+- [x] #19 Markup acima de 99% mostrava valor não-aplicado → clamp 1..99 no input.
+- [x] #17/#26a Acessibilidade: popup de recompra (role/aria/ESC/Fechar) + aria-label na textarea da IA.
+- [x] #18 "Atividade Recente" sem estado vazio → mensagem.
+
+**Pendente — precisa de DECISÃO/AÇÃO sua (não apliquei p/ não arriscar em produção):**
+- [ ] #1 **Segurança ALTA:** rotas `/api/ai/*` são públicas (sem auth) → qualquer um pode gastar a cota do Gemini. Corrigir com verificação de ID token Firebase + rate-limit (exige ajustar clients p/ enviar token). Recomendado priorizar.
+- [ ] #2 **Webhook WhatsApp** sem validar assinatura (App Secret vazio = aceita tudo). Setar `WHATSAPP_APP_SECRET` + tornar fail-closed em produção (não aplicar antes do segredo, senão derruba o webhook).
+- [ ] #3 **Upload de arquivo não sobe ao Storage** (`fileUrl:'#'`, perda silenciosa). Precisa configurar Firebase Storage + regras.
+- [ ] #8 Tabela "Investimento" da proposta: soma das linhas ≠ resumo (arredondamento). Decidir: distribuir resíduo na última linha OU ocultar coluna por linha quando houver resumo.
+- [ ] #13/#14/#22/#23 **Regras do Firestore** (uid vs e-mail no ownership; `isValidTask` sem `businessUnit`; ordem do `isAdmin`; `WHATSAPP_VERIFY_TOKEN` previsível) — mudanças sensíveis, testar com cuidado.
+- [ ] #10 Recompra usa negociações filtradas por vendor → pode perder recorrência / nome "Cliente". Decidir escopo (admin vê tudo).
+- [ ] #9 `createdAt` inconsistente (Timestamp vs ISO) — padronizar em `serverTimestamp()`.
+- [ ] #24 Deletar lead deixa negociações/interações órfãs → batch/soft-delete.
+- [ ] #11 Erros de `onSnapshot` só no console → exibir banner.
+> Relatório completo do review (todos os 29 com arquivo:linha) salvo no run do workflow `wf_59a70ae4-2bf`.
+
 ## 📋 Pendências (abertas)
 - [ ] **Número REAL do WhatsApp:** o número de teste (+1 555 667 3785) só fala com destinatários cadastrados. Pra captar de clientes quaisquer, adicionar um número real à WABA. ⚠️ Colocar na Cloud API **desativa o app do WhatsApp** nele (ligações/SMS da linha seguem). Avaliar **número dedicado**. Escopo atual: só receber.
 - [x] **`GEMINI_API_KEY`** (segredo): setado (v2) + bloco habilitado no `apphosting.yaml`. IA ativa em proposta, recompra e WhatsApp→lead.

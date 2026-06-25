@@ -103,6 +103,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
     try {
       const resp = await fetch('/api/ai/proposal-text', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           tipo,
           contratante: contratante.nome,
@@ -129,12 +130,17 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
   const setGradeCell = (i: number, d: number, v: string) =>
     setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, cells: s.cells.map((c, di) => di === d ? v : c) } : s));
 
-  // Resumo financeiro: do rascunho salvo (edição) ou puxado do precificador.
-  const resumo = initialData?.resumo ?? (pricing ? (() => {
-    const total = pricing.valorFinal || 0;
-    const impostos = total * ISS_RATE / (1 + ISS_RATE);
-    return { totalHoras: pricing.totalHoras || 0, subtotal: total - impostos, impostos, total };
-  })() : undefined);
+  // Resumo financeiro. Em modo EDIÇÃO usa EXATAMENTE o resumo salvo (inclusive
+  // null = proposta sem resumo) — nunca deriva do `pricing`, que ali aponta para
+  // a negociação mais recente do cliente (e injetaria valores de OUTRO orçamento).
+  // Na criação, puxa do precificador quando há pricing.
+  const resumo = editingDocId
+    ? (initialData?.resumo ?? undefined)
+    : (initialData?.resumo ?? (pricing ? (() => {
+        const total = pricing.valorFinal || 0;
+        const impostos = total * ISS_RATE / (1 + ISS_RATE);
+        return { totalHoras: pricing.totalHoras || 0, subtotal: total - impostos, impostos, total };
+      })() : undefined));
 
   // Aulas/modalidades (da tabela de investimento) usadas como sugestão na grade.
   const modalidadesGrade = Array.from(new Set(itens.map(i => i.item.trim()).filter(Boolean)));
