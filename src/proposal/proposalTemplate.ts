@@ -107,6 +107,9 @@ export function buildProposalHtml(input: PropostaInput): string {
   table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.92rem;}
   td,th{border:1px solid #d9d9d9;padding:9px 11px;vertical-align:top;}
   .k{background:#f3f6fa;font-weight:bold;color:#003366;white-space:nowrap;width:150px;}
+  .empresas{table-layout:fixed;}
+  .empresas .k{white-space:normal;width:24%;}
+  .empresas td{word-break:break-word;}
   .invest th{background:#003366;color:#fff;text-align:center;}
   .invest td{text-align:center;}
   .invest th:first-child,.invest td:first-child{text-align:left;width:26%;}
@@ -123,10 +126,11 @@ export function buildProposalHtml(input: PropostaInput): string {
   @media print{
     .noprint{display:none;}
     h1,h2{page-break-after:avoid;}
-    .grade-section{page-break-before:always;}
+    .pg{page-break-before:always;}
     .grade-section table{page-break-inside:avoid;}
     .invest-block{page-break-inside:avoid;}
   }
+  .pg>h1:first-child{margin-top:0;}
   .capa{min-height:88vh;display:flex;flex-direction:column;justify-content:space-between;text-align:center;border-top:10px solid #FF9900;border-bottom:10px solid #003366;padding:40px 20px;page-break-after:always;}
   .capa-brand{color:#003366;font-weight:900;font-size:1.4rem;letter-spacing:1px;}
   .capa-brand span{color:#FF9900;}
@@ -158,14 +162,14 @@ export function buildProposalHtml(input: PropostaInput): string {
 
   <h1>Empresas Envolvidas</h1>
   <h2>Contratante</h2>
-  <table>
+  <table class="empresas">
     <tr><td class="k">Nome</td><td colspan="3">${esc(c.nome)}</td></tr>
     ${c.cnpj ? `<tr><td class="k">CNPJ</td><td colspan="3">${esc(c.cnpj)}</td></tr>` : ''}
     ${c.endereco ? `<tr><td class="k">Endereço</td><td colspan="3">${esc(c.endereco)}</td></tr>` : ''}
     <tr><td class="k">Cidade</td><td>${esc(cidadeUf)}</td><td class="k">CEP</td><td>${esc(c.cep || '')}</td></tr>
   </table>
   <h2>Proponente</h2>
-  <table>
+  <table class="empresas">
     <tr><td class="k">Razão Social</td><td>${PROPONENTE.razaoSocial}</td><td class="k">CNPJ</td><td>${PROPONENTE.cnpj}</td></tr>
     <tr><td class="k">Nome Comercial</td><td>${PROPONENTE.nomeComercial}</td><td class="k">Inscrição Municipal</td><td>${PROPONENTE.inscricaoMunicipal}</td></tr>
     <tr><td class="k">Endereço</td><td colspan="3">${PROPONENTE.endereco} — ${PROPONENTE.cidade}/${PROPONENTE.uf}, CEP ${PROPONENTE.cep}</td></tr>
@@ -174,13 +178,16 @@ export function buildProposalHtml(input: PropostaInput): string {
   <p><strong>Representante Legal:</strong> ${REPRESENTANTE}</p>
   <p><strong>Sindicato:</strong> Conselho Regional de Educação Física CREF/SP.</p>
 
+  <section class="pg">
   <h1>Apresentação</h1>
   <p>Na Benesse Gestão Esportiva, acreditamos que um ambiente de trabalho saudável e dinâmico é essencial para o bem-estar e a produtividade dos colaboradores. Com 10 anos de experiência, nossa assessoria especializada oferece soluções personalizadas de ginástica laboral e atividades físicas para empresas que buscam promover a saúde dos funcionários e melhorar o clima organizacional.</p>
   <p>Já desenvolvemos projetos com empresas como Centauro, Luggo, Plano&amp;Plano, entre outros. Sempre com foco em resultados reais e bem-estar coletivo.</p>
 
   <h1>Principais Diferenciais</h1>
   <ul>${DIFERENCIAIS.map(d => `<li>${esc(d)}</li>`).join('')}</ul>
+  </section>
 
+  <section class="pg">
   <h1>Escopo</h1>
   <p>${nl2br(input.escopo)}</p>
 
@@ -190,7 +197,9 @@ export function buildProposalHtml(input: PropostaInput): string {
     <div class="grade">${renderScheduleTable(input.grade.dias, input.grade.slots)}</div>
     ${input.grade.observacao && input.grade.observacao.trim() ? `<p class="grade-obs">${nl2br(input.grade.observacao)}</p>` : ''}
   </section>` : ''}
+  </section>
 
+  <section class="pg">
   <h1>Matriz de Responsabilidades</h1>
   <h2>Responsabilidades da Contratante</h2>
   <ul>${RESP_CONTRATANTE_PADRAO.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
@@ -204,7 +213,9 @@ export function buildProposalHtml(input: PropostaInput): string {
 
   <h1>Vigência do Contrato</h1>
   <p>${esc(input.vigencia)}</p>
+  </section>
 
+  <section class="pg">
   <section class="invest-block">
   <h1>Investimento</h1>
   <table class="invest">
@@ -229,5 +240,6 @@ export function buildProposalHtml(input: PropostaInput): string {
   <h1>Agradecimento</h1>
   <p>${nl2br(input.agradecimento || AGRADECIMENTO_PADRAO)}</p>
   <p class="assinatura">Atenciosamente,<br/><strong>Benesse Gestão Esportiva</strong><br/>José Luiz Gomes — Diretor Geral</p>
+  </section>
 </body></html>`;
 }
