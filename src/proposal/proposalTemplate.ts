@@ -33,7 +33,7 @@ export interface PropostaInput {
   itens: PropostaItem[];
   valorTotalGeral: number;
   // Quadro de horários (grade semanal) incluído na proposta (opcional).
-  grade?: { dias: string[]; slots: { label: string; cells: string[] }[] };
+  grade?: { dias: string[]; slots: { label: string; cells: string[] }[]; observacao?: string };
   // Resumo puxado do precificador (opcional). Sem custos/margens internas.
   resumo?: {
     totalHoras: number;
@@ -104,11 +104,13 @@ export function buildProposalHtml(input: PropostaInput): string {
   body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.55;max-width:820px;margin:0 auto;padding:32px 28px 64px;}
   h1{color:#003366;font-size:1.3rem;border-bottom:3px solid #FF9900;padding-bottom:6px;margin-top:30px;}
   h2{color:#003366;font-size:1.05rem;margin-top:24px;}
-  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.92rem;}
-  td,th{border:1px solid #d9d9d9;padding:6px 8px;}
-  .k{background:#f3f6fa;font-weight:bold;color:#003366;white-space:nowrap;}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.92rem;}
+  td,th{border:1px solid #d9d9d9;padding:9px 11px;vertical-align:top;}
+  .k{background:#f3f6fa;font-weight:bold;color:#003366;white-space:nowrap;width:150px;}
   .invest th{background:#003366;color:#fff;text-align:center;}
   .invest td{text-align:center;}
+  .invest th:first-child,.invest td:first-child{text-align:left;width:26%;}
+  .grade-obs{margin-top:10px;color:#444;font-size:.9rem;}
   .total{font-size:1.15rem;font-weight:bold;color:#003366;}
   ul{margin:8px 0;padding-left:20px;} li{margin:4px 0;}
   .head{color:#6c757d;font-size:.9rem;}
@@ -118,7 +120,13 @@ export function buildProposalHtml(input: PropostaInput): string {
   .grade td{text-align:center;}
   .grade .aula{display:inline-block;background:#FFF3E0;color:#8a5200;border:1px solid #FFD9A8;border-radius:8px;padding:2px 7px;font-weight:600;}
   .noprint{position:fixed;top:12px;right:12px;background:#003366;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:bold;cursor:pointer;}
-  @media print{.noprint{display:none;}}
+  @media print{
+    .noprint{display:none;}
+    h1,h2{page-break-after:avoid;}
+    .grade-section{page-break-before:always;}
+    .grade-section table{page-break-inside:avoid;}
+    .invest-block{page-break-inside:avoid;}
+  }
   .capa{min-height:88vh;display:flex;flex-direction:column;justify-content:space-between;text-align:center;border-top:10px solid #FF9900;border-bottom:10px solid #003366;padding:40px 20px;page-break-after:always;}
   .capa-brand{color:#003366;font-weight:900;font-size:1.4rem;letter-spacing:1px;}
   .capa-brand span{color:#FF9900;}
@@ -176,7 +184,12 @@ export function buildProposalHtml(input: PropostaInput): string {
   <h1>Escopo</h1>
   <p>${nl2br(input.escopo)}</p>
 
-  ${input.grade && input.grade.slots.length ? `<h1>Quadro de Horários</h1><div class="grade">${renderScheduleTable(input.grade.dias, input.grade.slots)}</div>` : ''}
+  ${input.grade && input.grade.slots.length ? `
+  <section class="grade-section">
+    <h1>Quadro de Horários</h1>
+    <div class="grade">${renderScheduleTable(input.grade.dias, input.grade.slots)}</div>
+    ${input.grade.observacao && input.grade.observacao.trim() ? `<p class="grade-obs">${nl2br(input.grade.observacao)}</p>` : ''}
+  </section>` : ''}
 
   <h1>Matriz de Responsabilidades</h1>
   <h2>Responsabilidades da Contratante</h2>
@@ -192,6 +205,7 @@ export function buildProposalHtml(input: PropostaInput): string {
   <h1>Vigência do Contrato</h1>
   <p>${esc(input.vigencia)}</p>
 
+  <section class="invest-block">
   <h1>Investimento</h1>
   <table class="invest">
     <tr><th>Item</th><th>Data</th><th>Profissionais</th><th>Dias</th><th>Horas/dia</th><th>Valor hora</th><th>Valor Total</th></tr>
@@ -207,6 +221,7 @@ export function buildProposalHtml(input: PropostaInput): string {
   <table style="width:auto;margin-left:auto;margin-top:8px;">
     <tr><td class="k total">Valor Total</td><td class="total" style="text-align:right">${brl(input.valorTotalGeral)}</td></tr>
   </table>`}
+  </section>
 
   <h1>Validade da Proposta</h1>
   <p>As condições comerciais apresentadas nesta proposta são válidas por 60 (sessenta) dias a contar desta data.</p>

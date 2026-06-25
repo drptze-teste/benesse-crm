@@ -50,6 +50,7 @@ export interface ProposalDraft {
   itens: (PropostaItem & { horasDecimal: number })[];
   incluirGrade: boolean;
   gradeSlots: GradeSlot[];
+  gradeObs?: string;
   resumo?: { totalHoras: number; subtotal: number; impostos: number; total: number } | null;
 }
 
@@ -91,6 +92,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
       : pricing?.servicos?.length ? linhasFromPricing(pricing) : [novaLinha()]);
   const [incluirGrade, setIncluirGrade] = useState(() => initialData?.incluirGrade ?? false);
   const [gradeSlots, setGradeSlots] = useState<GradeSlot[]>(() => initialData?.gradeSlots?.length ? initialData.gradeSlots : [novoGradeSlot(), novoGradeSlot()]);
+  const [gradeObs, setGradeObs] = useState(() => initialData?.gradeObs ?? '');
   const [saving, setSaving] = useState(false);
 
   const setGradeLabel = (i: number, v: string) => setGradeSlots(p => p.map((s, idx) => idx === i ? { ...s, label: v } : s));
@@ -135,7 +137,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
         vigencia,
         localidades: localidades.trim() || undefined,
         grade: incluirGrade
-          ? { dias: DIAS_GRADE, slots: gradeSlots.filter(s => s.label.trim() || s.cells.some(c => c.trim())) }
+          ? { dias: DIAS_GRADE, slots: gradeSlots.filter(s => s.label.trim() || s.cells.some(c => c.trim())), observacao: gradeObs.trim() || undefined }
           : undefined,
         itens: itensCalc,
         valorTotalGeral,
@@ -145,7 +147,7 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
       // Rascunho estruturado (pra reabrir e editar depois).
       const draft: ProposalDraft = {
         capaId, contratante, presetId, escopo, responsabilidades, agradecimento,
-        vigencia, localidades, itens, incluirGrade, gradeSlots, resumo: resumo ?? null,
+        vigencia, localidades, itens, incluirGrade, gradeSlots, gradeObs, resumo: resumo ?? null,
       };
       const title = `Proposta — ${contratante.nome}`;
 
@@ -338,6 +340,11 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
                 <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => setGradeSlots(p => [...p, novoGradeSlot()])}>
                   Adicionar horário
                 </Button>
+                <div className="space-y-1 pt-1">
+                  <label className="text-xs font-semibold text-gray-700">Observações do quadro (opcional)</label>
+                  <textarea className={cn(inputCls, 'h-20')} placeholder="Ex.: turmas sujeitas a ajuste conforme adesão; horários podem variar por unidade…"
+                    value={gradeObs} onChange={e => setGradeObs(e.target.value)} />
+                </div>
               </div>
             )}
           </section>

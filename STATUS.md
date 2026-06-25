@@ -26,6 +26,7 @@ de criada ("Editar" reabre o rascunho).
 
 **Próximos sugeridos (em aberto):**
 - [ ] Testar o ciclo completo num **condomínio** (precificador → proposta com grade → editar → enviar) e dar retorno.
+- [x] **Diagramação da proposta** — 2026-06-24: Empresas Envolvidas com colunas de rótulo de largura fixa + mais padding (valores deixam de ficar espremidos); Quadro de Horários vira `<section>` que sempre começa em nova página, não quebra a tabela, e ganhou campo de "Observações do quadro" (no rascunho `gradeObs`); Investimento agora é `<section class="invest-block">` com `page-break-inside:avoid`. Quebras só aparecem no PDF/impressão.
 - [x] **Orçamento → Proposta direto** — 2026-06-24: cada orçamento precificado (aba Negociações) tem botão "Gerar Proposta" que abre o gerador já baseado nele; o gerador mostra "Baseado no orçamento: …" (nome/valor/data). Botão genérico da aba Documentos usa o mais recente, também rotulado. Antes não havia caminho do orçamento p/ proposta e não se sabia qual orçamento entrava.
 - [x] Aulas do precificador também no **Quadro de Horários separado** (ScheduleModal) — 2026-06-24: o modal recebe `pricing` e oferece as modalidades do orçamento como sugestões (datalist) nas células, igual à grade dentro da proposta.
 - [ ] (Opcional) **IA** pra redigir escopo/e-mail (precisa do segredo `GEMINI_API_KEY`).
