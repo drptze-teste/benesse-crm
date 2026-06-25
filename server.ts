@@ -7,7 +7,7 @@ import admin from 'firebase-admin';
 import { GoogleGenAI } from "@google/genai";
 
 // Modelo Gemini configurável por env; default estável e disponível.
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 // Segredo do App da Meta (App Secret). Se configurado, valida a assinatura
 // X-Hub-Signature-256 de cada webhook — impede que terceiros forjem mensagens.
@@ -56,7 +56,7 @@ async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", build: "ia-key-v3" });
+    res.json({ status: "ok", build: "ia-model-25" });
   });
 
   // IA: extrai dados de lead a partir de uma mensagem de WhatsApp.

@@ -11,7 +11,7 @@ runConfig:
 env:
   # Modelo Gemini usado pelas rotas /api/ai/* (server-side).
   - variable: GEMINI_MODEL
-    value: gemini-2.0-flash
+    value: gemini-2.5-flash
     availability:
       - RUNTIME
 
