@@ -34,8 +34,10 @@ export function calcularServico(s: Atividade, encargoCltFrac: number = ENCARGO_C
   const custoTotal       = parseNum(s.custoHora) * horasMes;
   // PJ não incide encargos CLT; só CLT recebe o multiplicador de encargos.
   const encargo          = s.regime === 'PJ' ? 1 : (1 + encargoCltFrac);
-  const custoComEncargos = custoTotal * encargo;
-  return { horasMes, custoTotal, custoComEncargos };
+  // Vale transporte/combustível: só CLT, somado por cima (não sofre encargo).
+  const vale             = s.regime === 'CLT' ? parseNum(s.valeCusto) : 0;
+  const custoComEncargos = custoTotal * encargo + vale;
+  return { horasMes, custoTotal, custoComEncargos, vale };
 }
 
 /**

@@ -108,6 +108,7 @@ export interface NegotiationPricingItem {
   horasDia: number;
   custoHora: number;
   regime: 'CLT' | 'PJ';
+  valeCusto?: number;   // vale transporte/combustível mensal (só CLT)
   quantidadeEventos?: number;
   horasMes: number;
 }

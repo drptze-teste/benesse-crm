@@ -15,6 +15,9 @@ export interface Atividade {
   horasDia: number;
   custoHora: number;
   regime: 'CLT' | 'PJ';
+  // Vale transporte/combustível mensal — só CLT, individual por funcionário
+  // (não segue padrão). Somado ao custo após os encargos (vale não sofre encargo).
+  valeCusto?: number;
   fromGrade?: boolean;
   // Específico de empresa / evento corporativo
   tipoServico?: 'Recorrente' | 'Pontual';
@@ -35,7 +38,7 @@ export interface Cliente {
 }
 
 export interface ResultadoProposta {
-  servicosCalculados: (Atividade & { horasMes: number; custoTotal: number; custoComEncargos: number })[];
+  servicosCalculados: (Atividade & { horasMes: number; custoTotal: number; custoComEncargos: number; vale: number })[];
   custoTotalBruto: number;
   markup: number;
   markupPct: number;

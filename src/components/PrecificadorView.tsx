@@ -52,7 +52,7 @@ const novoServico = (tabela: Modalidade[]): Atividade => {
   const custoHora = matchCusto(modalidade, tabela).custo;
   return {
     modalidade, turno: 'Manhã', horario: '', diasSemana: [],
-    diasMes: 12, horasDia: 1, custoHora, regime: 'PJ',
+    diasMes: 12, horasDia: 1, custoHora, regime: 'PJ', valeCusto: 0,
     tipoServico: 'Recorrente', quantidadeEventos: 1,
   };
 };
@@ -77,6 +77,7 @@ function toNegotiationPricing(res: ResultadoProposta, encargoCltPct: number): Ne
       horasDia: s.horasDia,
       custoHora: s.custoHora,
       regime: s.regime,
+      valeCusto: s.valeCusto ?? 0,
       quantidadeEventos: s.quantidadeEventos,
       horasMes: s.horasMes,
     })),
@@ -96,6 +97,7 @@ function pricingToServicos(p: NegotiationPricing): Atividade[] {
     horasDia: s.horasDia,
     custoHora: s.custoHora,
     regime: s.regime,
+    valeCusto: s.valeCusto ?? 0,
     tipoServico: s.tipoServico ?? 'Recorrente',
     quantidadeEventos: s.quantidadeEventos ?? 1,
   }));
@@ -195,8 +197,8 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
             const matched = matchCusto(s.modalidade, tabela).matched;
             // Conferência por serviço: custo mês (PJ) ou salário + encargos (CLT).
             const encFrac = Math.max(0, parseNum(encargoCltPct, 65)) / 100;
-            const { horasMes, custoTotal, custoComEncargos } = calcularServico(s, encFrac);
-            const encargosVal = custoComEncargos - custoTotal;
+            const { horasMes, custoTotal, custoComEncargos, vale } = calcularServico(s, encFrac);
+            const encargosVal = custoComEncargos - custoTotal - vale;
             return (
               <Card key={i} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -261,6 +263,12 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
                     <DecimalInput value={s.custoHora} prefix="R$" minDecimals={2} maxDecimals={2}
                       onChange={n => updateServico(i, { custoHora: n })} />
                   </Field>
+                  {s.regime === 'CLT' && (
+                    <Field label="Vale transp./comb. (mês)">
+                      <DecimalInput value={s.valeCusto ?? 0} prefix="R$" minDecimals={2} maxDecimals={2}
+                        onChange={n => updateServico(i, { valeCusto: n })} />
+                    </Field>
+                  )}
                 </div>
 
                 {/* Conferência: detalhamento do custo deste serviço (lado a lado) */}
@@ -270,6 +278,9 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
                     <>
                       <span className="text-gray-600">Salário base <b className="text-gray-900">{formatBRL(custoTotal)}</b></span>
                       <span className="text-gray-600">Encargos {formatPct(encargoCltPct, 1)}% <b className="text-gray-900">{formatBRL(encargosVal)}</b></span>
+                      {vale > 0 && (
+                        <span className="text-gray-600">Vale transp./comb. <b className="text-gray-900">{formatBRL(vale)}</b></span>
+                      )}
                     </>
                   )}
                   <span className="font-semibold text-[#003366]">
