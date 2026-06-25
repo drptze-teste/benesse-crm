@@ -41,6 +41,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PrecificadorView } from './components/PrecificadorView';
 import { ProposalModal } from './components/ProposalModal';
 import { ScheduleModal } from './components/ScheduleModal';
+import { detectarRecompras, RecompraAlert } from './recompra';
 import { 
   DndContext, 
   closestCorners, 
@@ -476,6 +477,54 @@ const WhatsAppInbox = ({ messages, onProcess, onCreateLead, onIgnore }: { messag
 
 // --- Main App ---
 
+// "Possível recompra" — formata quando a próxima recompra é esperada.
+function recompraQuando(a: RecompraAlert): string {
+  const mesAno = new Date(a.expectedDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  if (a.daysUntil <= 0) return `prevista para ${mesAno}`;
+  return `em ~${a.daysUntil} dia${a.daysUntil === 1 ? '' : 's'} · ${mesAno}`;
+}
+
+const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ alert, onOpen }) => {
+  return (
+    <div className="flex items-center justify-between gap-3 bg-white rounded-xl border border-amber-100 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-gray-900 truncate">
+          {alert.customerName} <span className="font-normal text-gray-300">·</span> {alert.item}
+        </p>
+        <p className="text-[11px] text-gray-500 truncate">{recompraQuando(alert)} — {alert.basis}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge variant={alert.confidence === 'alta' ? 'success' : 'neutral'}>{alert.confidence}</Badge>
+        <Button variant="outline" size="sm" onClick={onOpen}>Ver</Button>
+      </div>
+    </div>
+  );
+};
+
+const RecompraPopup: React.FC<{
+  alerts: RecompraAlert[]; onClose: () => void; onOpenCustomer: (id: string) => void;
+}> = ({ alerts, onClose, onOpenCustomer }) => {
+  return (
+    <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-[#003366]">
+            <Clock size={20} className="text-amber-500" /> Possível recompra ({alerts.length})
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-auto p-5 space-y-2">
+          <p className="text-xs text-gray-500 mb-2">Clientes que costumam recontratar nos próximos 60 dias, com base nos contratos fechados. Boa hora para um contato proativo.</p>
+          {alerts.map((a, i) => <RecompraRow key={i} alert={a} onOpen={() => onOpenCustomer(a.customerId)} />)}
+        </div>
+        <div className="p-4 border-t border-gray-100 flex justify-end">
+          <Button variant="primary" onClick={onClose}>Entendi</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -510,6 +559,18 @@ export default function App() {
     'Studio de Pilates': B2C_STAGES
   });
   const [showManageFunnel, setShowManageFunnel] = useState(false);
+
+  // "Possível recompra": alertas de sazonalidade (até 60 dias) a partir dos contratos fechados.
+  const recompraAlerts = useMemo(() => detectarRecompras(negotiations, leads, new Date()), [negotiations, leads]);
+  const recompraCustomerIds = useMemo(() => new Set(recompraAlerts.map(a => a.customerId)), [recompraAlerts]);
+  const [showRecompraPopup, setShowRecompraPopup] = useState(false);
+  const recompraShownRef = useRef(false);
+  useEffect(() => {
+    if (recompraShownRef.current || recompraAlerts.length === 0) return;
+    recompraShownRef.current = true;
+    if (sessionStorage.getItem('benesse_recompra_popup') === 'dismissed') return;
+    setShowRecompraPopup(true);
+  }, [recompraAlerts.length]);
 
   const filteredLeads = leads.filter(l => {
     const name = l.name || '';
@@ -963,6 +1024,27 @@ export default function App() {
                   />
                 </div>
 
+                {recompraAlerts.length > 0 && (
+                  <Card className="p-6 border border-amber-200 bg-amber-50/40">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-lg flex items-center gap-2 text-[#003366]">
+                        <Clock size={20} className="text-amber-500" /> Possível recompra
+                        <Badge variant="warning">{recompraAlerts.length}</Badge>
+                      </h3>
+                      <Tooltip content="Clientes que costumam recontratar nesta época (com base nos contratos fechados). Aviso com até 60 dias de antecedência." className="text-gray-300" />
+                    </div>
+                    <div className="space-y-2">
+                      {recompraAlerts.slice(0, 6).map((a, i) => (
+                        <RecompraRow key={i} alert={a}
+                          onOpen={() => { const l = leads.find(x => x.id === a.customerId); if (l) setSelectedLead(l); }} />
+                      ))}
+                    </div>
+                    {recompraAlerts.length > 6 && (
+                      <p className="text-[11px] text-gray-400 mt-2">+{recompraAlerts.length - 6} outros — veja os selos na aba Clientes.</p>
+                    )}
+                  </Card>
+                )}
+
                 {profile?.role === 'admin' && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card className="p-6">
@@ -1277,6 +1359,7 @@ export default function App() {
                   negotiations={negotiations}
                   onCustomerClick={setSelectedLead}
                   user={user}
+                  recompraCustomerIds={recompraCustomerIds}
                 />
               </motion.div>
             )}
@@ -1429,6 +1512,19 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {showRecompraPopup && recompraAlerts.length > 0 && (
+        <RecompraPopup
+          alerts={recompraAlerts}
+          onClose={() => { setShowRecompraPopup(false); sessionStorage.setItem('benesse_recompra_popup', 'dismissed'); }}
+          onOpenCustomer={(id) => {
+            const l = leads.find(x => x.id === id);
+            setShowRecompraPopup(false);
+            sessionStorage.setItem('benesse_recompra_popup', 'dismissed');
+            if (l) setSelectedLead(l);
+          }}
+        />
+      )}
 
       {/* Lead Details Modal */}
       <AnimatePresence>
@@ -3409,7 +3505,8 @@ const CustomersView: React.FC<{
   negotiations: Negotiation[];
   onCustomerClick: (lead: Lead) => void;
   user: FirebaseUser | null;
-}> = ({ leads, negotiations, onCustomerClick, user }) => {
+  recompraCustomerIds?: Set<string>;
+}> = ({ leads, negotiations, onCustomerClick, user, recompraCustomerIds }) => {
   const customers = leads.filter(l => l.type === 'customer');
   const [searchTerm, setSearchTerm] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -3608,7 +3705,12 @@ const CustomersView: React.FC<{
                 )}>
                   <User size={20} />
                 </div>
-                <Badge variant="neutral">{customer.businessUnit}</Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="neutral">{customer.businessUnit}</Badge>
+                  {recompraCustomerIds?.has(customer.id) && (
+                    <Badge variant="warning">Possível recompra</Badge>
+                  )}
+                </div>
               </div>
               
               <h4 className="font-bold text-gray-900 group-hover:text-[#003366] transition-colors truncate">{customer.name}</h4>
