@@ -7,7 +7,7 @@ import {
   MODALIDADES_DEFAULT, PRICING_TABLE_KEY, PRICING_ENCARGO_KEY, ENCARGO_CLT, TURNOS,
 } from '../pricing/pricingConstants';
 import {
-  calcularProposta, matchCusto, parseNum, formatBRL,
+  calcularProposta, calcularServico, matchCusto, parseNum, formatBRL,
 } from '../pricing/pricingUtils';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -193,6 +193,10 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
 
           {servicos.map((s, i) => {
             const matched = matchCusto(s.modalidade, tabela).matched;
+            // Conferência por serviço: custo mês (PJ) ou salário + encargos (CLT).
+            const encFrac = Math.max(0, parseNum(encargoCltPct, 65)) / 100;
+            const { horasMes, custoTotal, custoComEncargos } = calcularServico(s, encFrac);
+            const encargosVal = custoComEncargos - custoTotal;
             return (
               <Card key={i} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -257,6 +261,21 @@ export function PrecificadorView({ onApply, embedded, customers, onSaveProposal,
                     <DecimalInput value={s.custoHora} prefix="R$" minDecimals={2} maxDecimals={2}
                       onChange={n => updateServico(i, { custoHora: n })} />
                   </Field>
+                </div>
+
+                {/* Conferência: detalhamento do custo deste serviço (lado a lado) */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-blue-50/60 border border-blue-100 px-3 py-2 text-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Conferência</span>
+                  {s.regime === 'CLT' && (
+                    <>
+                      <span className="text-gray-600">Salário base <b className="text-gray-900">{formatBRL(custoTotal)}</b></span>
+                      <span className="text-gray-600">Encargos {formatPct(encargoCltPct, 1)}% <b className="text-gray-900">{formatBRL(encargosVal)}</b></span>
+                    </>
+                  )}
+                  <span className="font-semibold text-[#003366]">
+                    Custo mês {formatBRL(custoComEncargos)}
+                    {horasMes ? <span className="font-normal text-gray-400"> · {formatPct(horasMes, 2)} h</span> : null}
+                  </span>
                 </div>
 
                 {!matched && (
