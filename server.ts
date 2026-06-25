@@ -56,7 +56,7 @@ async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", build: "ia-model-25" });
+    res.json({ status: "ok" });
   });
 
   // IA: extrai dados de lead a partir de uma mensagem de WhatsApp.
@@ -130,7 +130,7 @@ NÃO inclua preços. Responda APENAS com o corpo do e-mail (sem assunto e sem as
       return res.json({ texto: (response.text || "").trim() });
     } catch (err) {
       console.error("Erro IA proposal-text:", err);
-      return res.status(500).json({ error: "Falha ao gerar texto com IA.", detail: String((err as Error)?.message || err) });
+      return res.status(500).json({ error: "Falha ao gerar texto com IA." });
     }
   });
 
@@ -149,7 +149,7 @@ Tom amigável e consultivo, 2 a 4 linhas, oferecendo renovar ou agendar uma conv
       return res.json({ texto: (response.text || "").trim() });
     } catch (err) {
       console.error("Erro IA recompra-text:", err);
-      return res.status(500).json({ error: "Falha ao gerar mensagem com IA.", detail: String((err as Error)?.message || err) });
+      return res.status(500).json({ error: "Falha ao gerar mensagem com IA." });
     }
   });
 
