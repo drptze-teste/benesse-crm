@@ -83,15 +83,17 @@ import {
   User as FirebaseUser 
 } from 'firebase/auth';
 import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
   deleteDoc,
   setDoc,
-  doc, 
+  doc,
+  getDocs,
+  writeBatch,
   serverTimestamp,
   orderBy,
   limit
@@ -625,6 +627,8 @@ export default function App() {
   const [documents, setDocuments] = useState<LeadDocument[]>([]);
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>([]);
+  // Erro de leitura (onSnapshot) — mostra banner em vez de falhar em silêncio.
+  const [dataError, setDataError] = useState<string | null>(null);
   
   // Workflows
   const [showAddLead, setShowAddLead] = useState(false);
@@ -770,12 +774,14 @@ export default function App() {
       }));
     }, (error) => {
       console.error("Error fetching leads:", error);
+      setDataError('Não foi possível carregar os leads — verifique sua conexão ou permissões.');
     });
 
     const unsubTasks = onSnapshot(qTasks, (snap) => {
       setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
     }, (error) => {
       console.error("Error fetching tasks:", error);
+      setDataError('Não foi possível carregar as tarefas — verifique sua conexão ou permissões.');
     });
 
     const unsubInteractions = onSnapshot(query(qInteractions, orderBy('dateTime', 'desc'), limit(50)), (snap) => {
@@ -787,6 +793,9 @@ export default function App() {
       // próprio erro traz a URL para criar o índice com 1 clique.
       if (error?.code === 'failed-precondition') {
         console.warn('[Firestore] Índice composto ausente para "interactions". Crie pelo link no erro acima.');
+        setDataError('Histórico de interações indisponível — falta um índice no Firestore (veja o console).');
+      } else {
+        setDataError('Não foi possível carregar as interações — verifique sua conexão ou permissões.');
       }
     });
 
@@ -794,12 +803,14 @@ export default function App() {
       setDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() } as LeadDocument)));
     }, (error) => {
       console.error("Error fetching documents:", error);
+      setDataError('Não foi possível carregar os documentos — verifique sua conexão ou permissões.');
     });
 
     const unsubNegotiations = onSnapshot(qNegotiations, (snap) => {
       setNegotiations(snap.docs.map(d => ({ id: d.id, ...d.data() } as Negotiation)));
     }, (error) => {
       console.error("Error fetching negotiations:", error);
+      setDataError('Não foi possível carregar as negociações — verifique sua conexão ou permissões.');
     });
 
     let unsubWhatsApp = () => {};
@@ -1046,6 +1057,14 @@ export default function App() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
+          {dataError && (
+            <div className="mb-4 flex items-center justify-between gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-2 text-sm">
+              <span className="flex items-center gap-2"><AlertCircle size={16} /> {dataError}</span>
+              <button onClick={() => setDataError(null)} className="text-red-400 hover:text-red-600" aria-label="Dispensar">
+                <X size={16} />
+              </button>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <motion.div 
@@ -1314,9 +1333,14 @@ export default function App() {
                     filteredTasks.filter(t => showCompletedTasks ? true : t.status === 'Pending').map(task => (
                       <Card key={task.id} className="p-4 hover:shadow-md transition-all">
                         <div className="flex items-center gap-4">
-                          <button 
+                          <button
                             onClick={async () => {
-                              await updateDoc(doc(db, 'tasks', task.id), { status: task.status === 'Completed' ? 'Pending' : 'Completed' });
+                              try {
+                                await updateDoc(doc(db, 'tasks', task.id), { status: task.status === 'Completed' ? 'Pending' : 'Completed' });
+                              } catch (err) {
+                                console.error('Erro ao concluir tarefa:', err);
+                                alert('Não foi possível atualizar a tarefa. Verifique suas permissões e tente novamente.');
+                              }
                             }}
                             className={cn(
                               "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
@@ -2349,6 +2373,8 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
   const [editProposal, setEditProposal] = useState<{ docId: string; data: any } | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showLossForm, setShowLossForm] = useState(false);
+  // Após enviar uma proposta, oferece criar tarefa de retorno (cobrar resposta).
+  const [followUp, setFollowUp] = useState<{ canal: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
   const [linkData, setLinkData] = useState({ title: '', url: '' });
@@ -2358,16 +2384,23 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
   const handleDeleteLead = async () => {
     if (!user) return;
     try {
-      // Delete the lead
-      await deleteDoc(doc(db, 'leads', lead.id));
-      
-      // Optionally delete related interactions, tasks, documents
-      // For simplicity and safety, we'll just delete the lead for now
-      // or we could batch delete them.
-      
+      // Exclui o lead E seus dados relacionados num batch atômico, evitando
+      // órfãos (negociações Won órfãs poluíam a "possível recompra"; refs mortas).
+      const batch = writeBatch(db);
+      const relacionados: [string, string][] = [
+        ['interactions', 'leadId'], ['tasks', 'leadId'],
+        ['documents', 'leadId'], ['negotiations', 'customerId'],
+      ];
+      for (const [col, campo] of relacionados) {
+        const snap = await getDocs(query(collection(db, col), where(campo, '==', lead.id)));
+        snap.forEach(d => batch.delete(d.ref));
+      }
+      batch.delete(doc(db, 'leads', lead.id));
+      await batch.commit();
       onClose();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `leads/${lead.id}`);
+      alert('Não foi possível excluir o cliente e seus dados relacionados. Verifique suas permissões.');
     }
   };
 
@@ -2458,12 +2491,38 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
     const msg = encodeURIComponent(`Olá! Segue ${docLabel(tipo).toLowerCase()} da Benesse Gestão Esportiva: ${propostaUrl(docId)}`);
     window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
     logEnvioDoc(docLabel(tipo), 'WhatsApp');
+    if (tipo === 'Proposal') setFollowUp({ canal: 'WhatsApp' });
   };
   const enviarPropostaEmail = (docId: string, tipo = 'Proposal') => {
     const subject = encodeURIComponent(`${docLabel(tipo)} — Benesse Gestão Esportiva`);
     const body = encodeURIComponent(`Olá,\n\nSegue ${docLabel(tipo).toLowerCase()}:\n${propostaUrl(docId)}\n\nQualquer dúvida, estamos à disposição.\nBenesse Gestão Esportiva`);
     window.location.href = `mailto:${lead.email || ''}?subject=${subject}&body=${body}`;
     logEnvioDoc(docLabel(tipo), 'E-mail');
+    if (tipo === 'Proposal') setFollowUp({ canal: 'E-mail' });
+  };
+  // Cria uma tarefa de retorno (cobrar resposta da proposta) atribuída ao usuário atual.
+  const criarTarefaRetorno = async (dias: number) => {
+    const email = auth.currentUser?.email;
+    if (!email) { setFollowUp(null); return; }
+    const due = format(addDays(new Date(), dias), 'yyyy-MM-dd');
+    try {
+      await addDoc(collection(db, 'tasks'), {
+        leadId: lead.id,
+        title: `Cobrar retorno da proposta — ${lead.companyName || lead.name}`,
+        dueDate: due,
+        reminderDate: due,
+        priority: 'Medium',
+        status: 'Pending',
+        assignedToUserId: email,
+        businessUnit: lead.businessUnit,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error('Erro ao criar tarefa de retorno:', err);
+      alert('Não foi possível criar a tarefa. Verifique suas permissões.');
+    } finally {
+      setFollowUp(null);
+    }
   };
   // Download em Word (.doc HTML, editável) e PDF (via impressão do navegador).
   const baixarWord = (d: LeadDocument) => {
@@ -2966,6 +3025,22 @@ function LeadDetailsView({ lead, interactions, documents, negotiations, user, pr
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.pricing}
           onClose={() => setShowSchedule(false)}
         />
+      )}
+
+      {followUp && (
+        <div className="fixed inset-0 z-[75] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setFollowUp(null)}>
+          <Card className="w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <div>
+              <h4 className="font-bold text-gray-900">Proposta enviada por {followUp.canal} ✓</h4>
+              <p className="text-sm text-gray-500 mt-1">Quer criar um lembrete para cobrar o retorno do cliente?</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="primary" onClick={() => criarTarefaRetorno(3)}>Em 3 dias</Button>
+              <Button variant="secondary" onClick={() => criarTarefaRetorno(7)}>Em 7 dias</Button>
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setFollowUp(null)}>Agora não</Button>
+          </Card>
+        </div>
       )}
 
       <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
@@ -3713,7 +3788,7 @@ const CustomersView: React.FC<{
                 type: 'customer',
                 currentStage: 'Fechado',
                 ownerUserId: user.email,
-                createdAt: new Date().toISOString(),
+                createdAt: serverTimestamp(),
                 updatedAt: new Date().toISOString()
               });
               customerId = newCustomerRef.id;
@@ -3729,7 +3804,7 @@ const CustomersView: React.FC<{
                 date: parseDataImport(negDate) ?? new Date().toISOString(),
                 status: (['Won', 'Lost', 'Ongoing'].includes(String(negStatus))) ? negStatus : 'Won',
                 description: negDesc ? String(negDesc) : 'Importado via planilha',
-                createdAt: new Date().toISOString(),
+                createdAt: serverTimestamp(),
                 createdByUserId: user.email
               });
             }
@@ -3870,7 +3945,7 @@ const NegotiationHistory: React.FC<{
         date: item.date ? new Date(item.date).toISOString() : new Date().toISOString(),
         status: (item.status === 'Won' || item.status === 'Lost' || item.status === 'Ongoing') ? item.status : 'Won',
         description: item.description || '',
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
         createdByUserId: auth.currentUser?.email
       }));
 

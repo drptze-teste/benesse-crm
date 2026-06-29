@@ -156,9 +156,13 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 - [ ] #8 Tabela "Investimento" da proposta: soma das linhas ≠ resumo (arredondamento). Decidir: distribuir resíduo na última linha OU ocultar coluna por linha quando houver resumo.
 - [ ] #13/#14/#22/#23 **Regras do Firestore** (uid vs e-mail no ownership; `isValidTask` sem `businessUnit`; ordem do `isAdmin`; `WHATSAPP_VERIFY_TOKEN` previsível) — mudanças sensíveis, testar com cuidado.
 - [ ] #10 Recompra usa negociações filtradas por vendor → pode perder recorrência / nome "Cliente". Decidir escopo (admin vê tudo).
-- [ ] #9 `createdAt` inconsistente (Timestamp vs ISO) — padronizar em `serverTimestamp()`.
-- [ ] #24 Deletar lead deixa negociações/interações órfãs → batch/soft-delete.
-- [ ] #11 Erros de `onSnapshot` só no console → exibir banner.
+- [x] #9 **RESOLVIDO (2026-06-25):** `createdAt` dos imports padronizado em `serverTimestamp()` (campo de negócio `date` segue ISO).
+- [x] #24 **RESOLVIDO (2026-06-25):** deletar lead agora apaga em batch atômico interações/tarefas/documentos/negociações relacionados (sem órfãos). _(deletes exigem admin nas rules — ok pro uso atual.)_
+- [x] #11 **RESOLVIDO (2026-06-25):** erros de `onSnapshot` agora mostram banner no topo (em vez de falhar em silêncio); índice ausente tem mensagem específica.
+
+## 🐞 Bug corrigido + melhoria (2026-06-25)
+- [x] **Concluir tarefa não funcionava** (bolinha não ficava verde / não saía da lista): o validador `isValidTask` das rules exigia `assignedToUserId == e-mail`, bloqueando admin/manager de concluir tarefas de terceiros (e o write falhava em silêncio). Corrigido: validador só de conteúdo + permissão no OR; create exige dono/manager/admin. **Regras já publicadas** (`firebase deploy --only firestore:rules`). Toggle agora tem try/catch + alerta.
+- [x] **Lembrete pós-proposta:** ao enviar proposta por WhatsApp/E-mail, abre diálogo "Criar lembrete de retorno?" → cria tarefa (Em 3 / Em 7 dias) atribuída ao vendedor, com `dueDate`/`reminderDate`.
 > Relatório completo do review (todos os 29 com arquivo:linha) salvo no run do workflow `wf_59a70ae4-2bf`.
 
 ## 📋 Pendências (abertas)

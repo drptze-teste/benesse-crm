@@ -79,10 +79,13 @@ service cloud.firestore {
              data.createdByUserId == request.auth.token.email;
     }
 
+    // Validador de CONTEÚDO apenas. A autorização (quem pode criar/editar) fica
+    // nas regras de create/update — NÃO exigir aqui assignedToUserId == e-mail,
+    // senão admin/manager não conseguem concluir tarefas de terceiros (e o toggle
+    // de concluir falha em silêncio).
     function isValidTask(data) {
       return data.title is string && data.title.size() > 0 &&
-             data.status in ['Pending', 'Completed', 'Cancelled'] &&
-             data.assignedToUserId == request.auth.token.email;
+             data.status in ['Pending', 'Completed', 'Cancelled'];
     }
 
     function isValidNegotiation(data) {
@@ -115,7 +118,8 @@ service cloud.firestore {
 
     match /tasks/{id} {
       allow read: if isAuthenticated() && (resource.data.assignedToUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
-      allow create: if isAuthenticated() && isValidTask(request.resource.data);
+      allow create: if isAuthenticated() && isValidTask(request.resource.data) &&
+        (request.resource.data.assignedToUserId == request.auth.token.email || isManager() || isAdmin());
       allow update: if isAuthenticated() && isValidTask(request.resource.data) && (resource.data.assignedToUserId == request.auth.token.email || (isManager() && isSameBusinessUnit(resource.data)) || isAdmin());
       allow delete: if isAdmin();
     }
