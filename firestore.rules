@@ -36,14 +36,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // #13: testa o e-mail hardcoded PRIMEIRO (curto-circuito) e protege o get()
+    // com exists() — admin nunca perde acesso se o doc users/{uid} não existir.
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "drptze@gmail.com" && request.auth.token.email_verified == true));
+        ((request.auth.token.email == "drptze@gmail.com" && request.auth.token.email_verified == true) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function isManager() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
     }
 
     function getMyBusinessUnit() {
@@ -85,7 +90,10 @@ service cloud.firestore {
     // de concluir falha em silêncio).
     function isValidTask(data) {
       return data.title is string && data.title.size() > 0 &&
-             data.status in ['Pending', 'Completed', 'Cancelled'];
+             data.status in ['Pending', 'Completed', 'Cancelled'] &&
+             // #22: valida o formato de businessUnit QUANDO presente (não força a
+             // existência, p/ não quebrar tarefas antigas sem o campo nem o toggle).
+             (!('businessUnit' in data) || data.businessUnit in ['Gestão Esportiva', 'Studio de Pilates']);
     }
 
     function isValidNegotiation(data) {
