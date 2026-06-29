@@ -45,12 +45,27 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// Exige um ID token Firebase válido (Authorization: Bearer <token>). Protege as
+// rotas de IA — só usuários logados podem gastar a cota do Gemini.
+async function isAuthed(req: any): Promise<boolean> {
+  const h = req.headers["authorization"] || "";
+  const m = /^Bearer (.+)$/.exec(Array.isArray(h) ? h[0] : h);
+  if (!m) return false;
+  try {
+    await admin.auth().verifyIdToken(m[1]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
   // Captura o corpo bruto (necessário para validar a assinatura HMAC da Meta).
   app.use(express.json({
+    limit: "256kb",
     verify: (req: any, _res, buf) => { req.rawBody = buf; },
   }));
 
@@ -62,6 +77,9 @@ async function startServer() {
   // IA: extrai dados de lead a partir de uma mensagem de WhatsApp.
   // A chave do Gemini fica SOMENTE no servidor (nunca no bundle do browser).
   app.post("/api/ai/whatsapp-lead", async (req, res) => {
+    if (!(await isAuthed(req))) {
+      return res.status(401).json({ error: "Não autenticado." });
+    }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
@@ -119,6 +137,9 @@ async function startServer() {
   // IA: redige o ESCOPO ou o E-MAIL de apresentação de uma proposta.
   // Nunca inclui preços/custos/margens (regra do modelo de proposta).
   app.post("/api/ai/proposal-text", async (req, res) => {
+    if (!(await isAuthed(req))) {
+      return res.status(401).json({ error: "Não autenticado." });
+    }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });
@@ -149,6 +170,9 @@ NÃO inclua preços. Responda APENAS com o corpo do e-mail (sem assunto e sem as
 
   // IA: redige uma mensagem de abordagem para "possível recompra" (sazonalidade).
   app.post("/api/ai/recompra-text", async (req, res) => {
+    if (!(await isAuthed(req))) {
+      return res.status(401).json({ error: "Não autenticado." });
+    }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(503).json({ error: "GEMINI_API_KEY não configurada no servidor." });

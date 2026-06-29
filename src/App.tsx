@@ -526,8 +526,9 @@ const RecompraRow: React.FC<{ alert: RecompraAlert; onOpen: () => void }> = ({ a
   const gerarMsg = async () => {
     setLoadingIA(true);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const resp = await fetch('/api/ai/recompra-text', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           customerName: alert.customerName, item: alert.item,
@@ -885,9 +886,10 @@ export default function App() {
       const suggestedBusinessUnit = WHATSAPP_FUNNEL_MAPPING[msg.businessPhoneNumber] || "Gestão Esportiva";
 
       // A chamada ao Gemini agora roda no backend (a chave fica só no servidor).
+      const token = await auth.currentUser?.getIdToken();
       const resp = await fetch('/api/ai/whatsapp-lead', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           text: msg.text,

@@ -101,8 +101,9 @@ export function ProposalModal({ lead, onClose, onSaved, pricing, pricingLabel, o
   const gerarComIA = async (tipo: 'escopo' | 'email') => {
     setIaLoading(tipo);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const resp = await fetch('/api/ai/proposal-text', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           tipo,

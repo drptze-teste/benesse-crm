@@ -150,7 +150,7 @@ firestore.rules / firestore.indexes.json / apphosting.yaml
 - [x] #18 "Atividade Recente" sem estado vazio → mensagem.
 
 **Pendente — precisa de DECISÃO/AÇÃO sua (não apliquei p/ não arriscar em produção):**
-- [ ] #1 **Segurança ALTA:** rotas `/api/ai/*` são públicas (sem auth) → qualquer um pode gastar a cota do Gemini. Corrigir com verificação de ID token Firebase + rate-limit (exige ajustar clients p/ enviar token). Recomendado priorizar.
+- [x] #1 **Segurança ALTA — RESOLVIDO (2026-06-25):** rotas `/api/ai/*` agora exigem **ID token Firebase** (`Authorization: Bearer`); sem token → 401. Helper `isAuthed()` no server.ts (`admin.auth().verifyIdToken`), limite de corpo `256kb`, e os 3 clients enviam `getIdToken()`. (Rate-limit por IP fica como melhoria futura — a auth já bloqueia abuso externo.)
 - [ ] #2 **Webhook WhatsApp** sem validar assinatura (App Secret vazio = aceita tudo). Setar `WHATSAPP_APP_SECRET` + tornar fail-closed em produção (não aplicar antes do segredo, senão derruba o webhook).
 - [ ] #3 **Upload de arquivo não sobe ao Storage** (`fileUrl:'#'`, perda silenciosa). Precisa configurar Firebase Storage + regras.
 - [ ] #8 Tabela "Investimento" da proposta: soma das linhas ≠ resumo (arredondamento). Decidir: distribuir resíduo na última linha OU ocultar coluna por linha quando houver resumo.
